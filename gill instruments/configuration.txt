@@ -1,0 +1,19 @@
+D3
+
+M2,U2,O2,L1,P20,B3,H1,NQ,F1,E3,T1,S9,C2,G0,K50,
+
+M2 = Gill polar continuous
+U2 = Output units in KNOTS
+O2 = output format fixed field
+L1 = Message terminator <CR> <LF>
+P20 = output rate 1 reading very 4 seconds
+B3 = Baud rate 9600
+H1 = power up message ON
+NQ = Node address : Q
+F1 = 8 bit no parity
+E3 = communication protocol RS232
+T1 = analog output 0-5V
+S9 = Analog output disabled
+C2 = 0-359 degrees
+G0 = not allocated
+K50 = minimum direction velocity

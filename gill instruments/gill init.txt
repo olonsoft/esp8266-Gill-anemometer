@@ -1,0 +1,21 @@
+WINDSONIC (Gill Instruments Ltd)
+2368-103
+RS232 (CFG)
+CHECKSUM ROM:4651 4651 *PASS*
+CHECKSUM FAC:0A2B 0A2B *PASS*
+CHECKSUM ENG:12B5 12B5 *PASS*
+CHECKSUM CAL:CC55 CC55 *PASS*
+
+10:24:05:210 restarted
+10:24:02:092 status sent
+10:19:25:051 data sent
+10:17:25:049 data sent
+10:15:25:049 data sent
+
+
+09:51:36.388 restarted
+09:51.33.217 status sent
+09:44.35.096 data sent
+09:42.35.101 data sent
+09:40:35:103 data sent
+

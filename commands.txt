@@ -1,0 +1,8 @@
+Topic anemo/01/cmd/
+status
+restart
+reset
+update
+broker userid:pass@url:port
+interval 120
+format
