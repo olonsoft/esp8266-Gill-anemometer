@@ -8,6 +8,7 @@
 #include <helper.h>
 #include <helper_wifi.h>
 #include <time_functions.h>
+#include <TZ.h>           // for TimeZone define
 
 // needed for justwifi
 #include <ESP8266WiFi.h>
@@ -18,7 +19,7 @@
 #define BUTTON1 D3  // GPIO 0
 
 #define APP_NAME    "Anemometer"
-#define APP_VERSION "1.1.2"  // Updated 2020-04-13
+#define APP_VERSION "1.1.3"  // Updated 2020-15-12
 #define APP_AUTHOR  "dimitris19@gmail.com"
 #define APP_WEBSITE "http://studio19.gr"
 
@@ -48,7 +49,7 @@ appSettings_t appSettings = {
     60,                                // data topic update interval
     600,                               // status topic update interval
     "http://fw.crete.ovh/firmware/anemometer/", // firmware url
-    900};                              // firmware update interval
+    900};                              // firmware update check interval
 
 #define CONFIGFILE "/config.json"
 
@@ -131,7 +132,9 @@ uint32_t screenSaverTime  = 120;  // seconds
 
 const char *ntpServer = "gr.pool.ntp.org";
 // timezones: https://remotemonitoringsystems.ca/time-zone-abbreviations.php
-const char *TZ_INFO = "EET-2EEST-3,M3.5.0/03:00:00,M10.5.0/04:00:00";  
+#define MY_TIMEZONE TZ_Europe_Athens
+
+// const char *TZ_INFO = "EET-2EEST-3,M3.5.0/03:00:00,M10.5.0/04:00:00";  
                                                      
 
 // =========================== onebutton ======================================
@@ -834,9 +837,14 @@ void initialize() {
   // start time client
   // ! move it after wifi connection.
   TDEBUG_PRINTF_P("[DEBUG] Starting ntp client.\n");
-  configTime(0, 0, ntpServer);
-  setenv("TZ", TZ_INFO, 1);
-  tzset();  // save the TZ variable
+  configTime(MY_TIMEZONE, ntpServer);  // updated for > 2.7.0
+  //configTime(0, 0, ntpServer);
+  //setenv("TZ", TZ_INFO, 1);
+  //tzset();  // save the TZ variable
+  
+  // Give now a chance to the settimeofday callback,
+  // because it is *always* deferred to the next yield()/loop()-call.
+  yield();
 }
 
 void startWiFiManager() {
