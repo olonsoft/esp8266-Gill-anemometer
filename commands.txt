@@ -1,4 +1,4 @@
-Topic anemo/01/cmd/
+Topic anemo/01/cmd
 status
 restart
 reset

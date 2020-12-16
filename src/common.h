@@ -41,7 +41,7 @@ typedef struct {
 appSettings_t appSettings = {
     "ssid",                            // wifi to connect
     "wifipass",                        // wifi password
-    "mqtt.eclipse.org",                // mqtt broker
+    "test.mosquitto.org",              // mqtt broker
     1883,                              // mqtt port
     "",                                // mqtt user
     "",                                // mqtt password
