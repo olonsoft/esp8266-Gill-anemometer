@@ -45,10 +45,10 @@ appSettings_t appSettings = {
     1883,                              // mqtt port
     "",                                // mqtt user
     "",                                // mqtt password
-    "olonsoft/devices/anemometer/01/", // mqtt topic
+    "olonsoft/devices/anemometer/gill01/", // mqtt topic
     60,                                // data topic update interval
     600,                               // status topic update interval
-    "http://fw.crete.ovh/firmware/anemometer/", // firmware url
+    "http://fw.crete.ovh/anemometer/gill01", // firmware url
     900};                              // firmware update check interval
 
 #define CONFIGFILE "/config.json"
@@ -59,6 +59,7 @@ appSettings_t appSettings = {
 #define EEPROM_SIZE 4096  // EEPROM size in bytes
 // #define SPI_FLASH_SEC_SIZE      4096
 
+#define MQTT_STR "[\e[32mMQTT\e[m] "
 #define MQTT_ENABLED
 #define USE_PUBSUBCLIENT
 
@@ -402,7 +403,7 @@ int saveFlashWiFi(const String& ssid, const String& pass) {
 void onFOTAMessage(fota_t t, char *msg) { TDEBUG_PRINT(msg); }
 
 void FOTA_Setup() {
-  FOTAClient.setFOTAParameters(appSettings.firmwareUpdateServer, APP_NAME,
+  FOTAClient.setFOTAParameters(addTrailingSlash(String(appSettings.firmwareUpdateServer)).c_str(), APP_NAME,
                                  APP_VERSION, APP_VERSION);
   FOTAClient.onMessage(onFOTAMessage);
 }
@@ -602,7 +603,7 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
   char message[len + 1];
   strlcpy(message, (char *)payload, len + 1);
   message[len] = '\0';
-  TDEBUG_PRINTF_P(PSTR("[MQTT] Topic: %s \tMessage: %s\n"), topic, message);
+  TDEBUG_PRINTF_P(PSTR("%sTopic: %s \tMessage: %s\n"), MQTT_STR, topic, message);
 
   char *command = strtok(message, " ");
 
@@ -695,14 +696,14 @@ void mqttCallback(String &topic, String &payload) {
 
 bool mqttConnect() {
   if (WiFi.status() != WL_CONNECTED) {
-    TDEBUG_PRINTF_P(PSTR("[MQTT] No WiFi connection \n"));
+    TDEBUG_PRINTF_P(PSTR("%sNo WiFi connection \n"), MQTT_STR);
     return (mqttConnected = false);
   }
-  TDEBUG_PRINTF_P(PSTR("[MQTT] Connecting to MQTT... \n"));
+  TDEBUG_PRINTF_P(PSTR("%sConnecting to MQTT... \n"), MQTT_STR);
   mqttConnected = mqttClient.connected();
   if (!mqttConnected) {
-    TDEBUG_PRINTF_P(PSTR("[MQTT] connecting to: \n\t%s\n\tPort: %d\n\tUser: "
-                       "%s\n\tpass: %s\n"),
+    TDEBUG_PRINTF_P(PSTR("%sConnecting to: \n\t%s\n\tPort: %d\n\tUser: "
+                       "%s\n\tpass: %s\n"), MQTT_STR,
                   appSettings.mqttBroker, appSettings.mqttPort,
                   appSettings.mqttUser, appSettings.mqttPass);
     String clientId = (char *)APP_NAME;
@@ -717,9 +718,9 @@ bool mqttConnect() {
     if (mqttClient.connect(clientId.c_str(), appSettings.mqttUser,
                            appSettings.mqttPass)) {
       mqttConnections++;
-      TDEBUG_PRINTF_P(PSTR("[MQTT] Connected.\n"));
+      TDEBUG_PRINTF_P(PSTR("%sConnected.\n"), MQTT_STR);
       String topic;
-      topic = String(appSettings.mqttTopic) + FPSTR(_topicCommand);
+      topic = addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicCommand);
       mqttClient.subscribe(topic.c_str());
       mqttConnected = true;
     } else {
@@ -729,10 +730,10 @@ bool mqttConnect() {
 #else
       err = int(mqttClient.lastError());
 #endif
-      TDEBUG_PRINTF_P(PSTR("[MQTT] Connection failed] rc = %d\n"), err);
+      TDEBUG_PRINTF_P(PSTR("%sConnection failed] rc = %d\n"), MQTT_STR, err);
     }
   } else {
-    TDEBUG_PRINTF_P(PSTR("[MQTT] Already connected.\n"));
+    TDEBUG_PRINTF_P(PSTR("%sAlready connected.\n"), MQTT_STR);
   }
   return mqttConnected;
 }
@@ -742,15 +743,15 @@ bool _mqttSendMessage(const char *message) {
   if (mqttConnect()) {
     statusString = "Sending...";
     String topic;
-    topic = String(appSettings.mqttTopic) + FPSTR(_topicStatus);
+    topic = addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicStatus);
     DEBUG_PRINTLN(topic.c_str());
     result = (mqttClient.publish(topic.c_str(), message) == true);
     mqttClient.loop();
   }
   if (result) {
-    TDEBUG_PRINTF_P(PSTR("[MQTT] Success sending message.\n"));
+    TDEBUG_PRINTF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
   } else {
-    TDEBUG_PRINTF_P(PSTR("[MQTT] Error sending message.\n"));
+    TDEBUG_PRINTF_P(PSTR("%sError sending message.\n"), MQTT_STR);
   }
   return result;
 }
@@ -796,7 +797,7 @@ void _mqttLoop() {
     static uint32_t last_mqtt_check = 0;
     if ((last_mqtt_check == 0) || (millis() - last_mqtt_check) > 10000) {
       last_mqtt_check = millis();
-      TDEBUG_PRINTF_P(PSTR("[MQTT] (mqttloop) Not connected. Reconnecting.\n"));
+      TDEBUG_PRINTF_P(PSTR("%s(mqttloop) Not connected. Reconnecting.\n"), MQTT_STR);
       mqttConnect();
     }
   } else {
