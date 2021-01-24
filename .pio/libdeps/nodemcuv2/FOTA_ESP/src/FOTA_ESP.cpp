@@ -3,7 +3,15 @@
 #include <ArduinoJson.h>
 #include <helper.h>
 
+#ifndef TERMINAL_IN_COLOR
+// #define TERMINAL_IN_COLOR
+#endif
+
+#ifdef TERMINAL_IN_COLOR
 #define FOTA_STR "[\e[32mFOTA\e[m] "
+#else
+#define FOTA_STR "[FOTA] "
+#endif
 
 #ifdef ESP8266    
   #define ESP_UPD ESPhttpUpdate
@@ -91,7 +99,7 @@ String FOTAClientClass::_getPayload() {
     http.addHeader(F("X-ESP-MAC"), WiFi.macAddress());
     //http.addHeader(F("X-ESP-DEVICE"), _device);
     http.addHeader(F("X-ESP-FIRMWARE-VERSION"), _currentFwVersion);
-    http.addHeader(F("X-ESP-SPIFFS-VERSION"), _currentFsVersion);
+    http.addHeader(F("X-ESP-FS-VERSION"), _currentFsVersion);
     //http.addHeader(F("X-ESP Build"), String(__UNIX_TIMESTAMP__))
     http.addHeader(F("X-ESP-CHIPID"), getChipIdHex());
     http.addHeader(F("X-ESP-free-space"), String(ESP.getFreeSketchSpace()));
