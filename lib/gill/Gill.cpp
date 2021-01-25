@@ -33,7 +33,7 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
 
   // checksum
   char scs = (char)strtol(data, 0, 16);
-  TDEBUG_PRINTF_P(PSTR("msg: %s cs: %X crc: %X\n"), msg, cs, scs);
+  TLOGDEBUGF_P(PSTR("msg: %s cs: %X crc: %X\n"), msg, cs, scs);
   if (scs != cs)
     return srCheckSumError;
   else {
@@ -70,12 +70,12 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
       }
       token_count++;
 
-      TDEBUG_PRINTF_P(PSTR("%s\n"), tok);
+      TLOGDEBUGF_P(PSTR("%s\n"), tok);
     }
     //DEBUG_PRINTF("\n");
     free(tofree);
 
-    TDEBUG_PRINTF_P(PSTR("Tokens: %c %d %.2f %c %d\n"), deviceID, _direction,
+    TLOGDEBUGF_P(PSTR("Tokens: %c %d %.2f %c %d\n"), deviceID, _direction,
                     _speed, unit, error);
 
     if (error > 0) {
@@ -103,7 +103,7 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
         break;
     }
     _speed = wfGill.convertUnit(_speed, receivedUnit, _windSpeedUnit);
-    TDEBUG_PRINTF_P(PSTR("Converted: %.2f\n"), _speed);
+    TLOGDEBUGF_P(PSTR("Converted: %.2f\n"), _speed);
   }
 
   return srOK;

@@ -98,7 +98,7 @@ bool WindFunc::getWindDirection(uint16_t &windDirectionCurrent, uint16_t &windDi
     // ! (int) or (uint16_t) ?
     windDirectionCurrent = _windDirectionCurrent;
     windDirectionAverage = (int)((atan2(_windDirectionSinTotal, _windDirectionCosTotal) / DEG2RAD) + 360) % 360;
-    TDEBUG_PRINTF_P(PSTR("[DEBUG] SinTotal %.3f CosTotal: %.3f Average Wind Direction: %d.\n"), _windDirectionSinTotal, _windDirectionCosTotal, windDirectionAverage);
+    TLOGDEBUGF_P(PSTR("[DEBUG] SinTotal %.3f CosTotal: %.3f Average Wind Direction: %d.\n"), _windDirectionSinTotal, _windDirectionCosTotal, windDirectionAverage);
     return true;
   }
   else 

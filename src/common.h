@@ -170,7 +170,7 @@ String Value2String(int y) { return !isnan(y) ? String(y) : ""; }
 String Value2String(float y) { return !isnan(y) ? String(y) : ""; }
 
 void debugConfig() {
-  TDEBUG_PRINTF_P(
+  TLOGDEBUGF_P(
       PSTR("\n[CONFIG] ssid: '%s'\n\t pass: '%s'\n\tBroker: %s\n\tPort: "
            "%d\n\tUser: %s\n\tPass: %s\n\tTopic: %s\n\tmqttInterval: "
            "%d\n\tstatusInterval: %d\n\tOTA server: %s\n\tOTA interval: %d\n"),
@@ -184,12 +184,12 @@ void debugConfig() {
 // ================================== ESP_FS ==================================
 
 bool formatFS() {
-  TDEBUG_PRINTF_P(PSTR("[ESP_FS] Formatting...\n"));
+  TLOGDEBUGF_P(PSTR("[ESP_FS] Formatting...\n"));
   if (ESP_FS.format()) {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] File system formatted !!!\n"));
+    TLOGDEBUGF_P(PSTR("[ESP_FS] File system formatted !!!\n"));
     return true;
   } else {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] Error formating file system.\n"));
+    TLOGDEBUGF_P(PSTR("[ESP_FS] Error formating file system.\n"));
     return false;
   }
 }
@@ -197,10 +197,10 @@ bool formatFS() {
 void checkFileSystem() {
   ESP_FSExist = false;
   if (!ESP_FS.begin()) {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] File system error. Formatting...\n"));
+    TLOGDEBUGF_P(PSTR("[ESP_FS] File system error. Formatting...\n"));
     ESP_FSExist = formatFS();
   } else {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] File system check OK.\n"));
+    TLOGDEBUGF_P(PSTR("[ESP_FS] File system check OK.\n"));
     ESP_FSExist = true;
   }
 }
@@ -227,7 +227,7 @@ bool saveConfig() {
   File configFile = ESP_FS.open(CONFIGFILE, "w");
 
   if (!configFile) {
-    TDEBUG_PRINTF_P(
+    TLOGDEBUGF_P(
         PSTR("[ESP_FS] Failed to open config file [%s] for writing.\n"),
         CONFIGFILE);
     return false;
@@ -236,9 +236,9 @@ bool saveConfig() {
   debugConfig();
 
   if (serializeJson(doc, configFile) > 0) {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] Configuration saved to File System.\n"));
+    TLOGDEBUGF_P(PSTR("[ESP_FS] Configuration saved to File System.\n"));
   } else {
-    TDEBUG_PRINTF_P(
+    TLOGDEBUGF_P(
         PSTR("[ESP_FS] Error saving configuration to File System.\n"));
     return false;
   }
@@ -248,25 +248,25 @@ bool saveConfig() {
 }
 
 bool loadConfig() {
-  TDEBUG_PRINTF_P(PSTR("[ESP_FS] Loading config from file [%s].\n"), CONFIGFILE);
+  TLOGDEBUGF_P(PSTR("[ESP_FS] Loading config from file [%s].\n"), CONFIGFILE);
   if (!ESP_FSExist) return false;
 
   if (!ESP_FS.exists(CONFIGFILE)) {
-    TDEBUG_PRINTF_P(PSTR("Config file does not exist. Creating default. [%s]\n"),
+    TLOGDEBUGF_P(PSTR("Config file does not exist. Creating default. [%s]\n"),
                   CONFIGFILE);
     return (saveConfig());
   }
 
   File configFile = ESP_FS.open(CONFIGFILE, "r");
   if (!configFile) {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] Failed to open config file [%s].\n"),
+    TLOGDEBUGF_P(PSTR("[ESP_FS] Failed to open config file [%s].\n"),
                   CONFIGFILE);
     return false;
   }
 
   size_t size = configFile.size();
   if (size > 1024) {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] Config file size is too large.\n"));
+    TLOGDEBUGF_P(PSTR("[ESP_FS] Config file size is too large.\n"));
     return false;
   }
 
@@ -275,7 +275,7 @@ bool loadConfig() {
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, configFile);
   if (error) {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] Failed to parse config file. Error: %s\n"),
+    TLOGDEBUGF_P(PSTR("[ESP_FS] Failed to parse config file. Error: %s\n"),
                   error.c_str());
     return false;
   }
@@ -314,18 +314,18 @@ bool loadConfig() {
 bool deleteConfig() {
   if (!ESP_FSExist) return false;
   if (!ESP_FS.exists(CONFIGFILE)) {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] Config file [%s] does not exist.\n"),
+    TLOGDEBUGF_P(PSTR("[ESP_FS] Config file [%s] does not exist.\n"),
                   CONFIGFILE);
     return false;
   }
 
-  TDEBUG_PRINTF_P(PSTR("[ESP_FS] Deleting config file [%s].\n"), CONFIGFILE);
+  TLOGDEBUGF_P(PSTR("[ESP_FS] Deleting config file [%s].\n"), CONFIGFILE);
 
   if (ESP_FS.remove(CONFIGFILE)) {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] Config File deleted.\n"));
+    TLOGDEBUGF_P(PSTR("[ESP_FS] Config File deleted.\n"));
     return true;
   } else {
-    TDEBUG_PRINTF_P(PSTR("[ESP_FS] Can not delete Config File.\n"));
+    TLOGDEBUGF_P(PSTR("[ESP_FS] Can not delete Config File.\n"));
     return false;
   }
 }
@@ -400,7 +400,7 @@ int saveFlashWiFi(const String& ssid, const String& pass) {
 */
 
 // FOTA section
-void onFOTAMessage(fota_t t, char *msg) { TDEBUG_PRINT(msg); }
+void onFOTAMessage(fota_t t, char *msg) { TLOGDEBUG(msg); }
 
 void FOTA_Setup() {
   FOTAClient.setFOTAParameters(addTrailingSlash(String(appSettings.firmwareUpdateServer)).c_str(), APP_NAME,
@@ -468,7 +468,7 @@ void restartESP() {
 }
 
 void resetESP() {
-  TDEBUG_PRINTF_P(PSTR("[RESET] Reset to factory defaults.\n"));
+  TLOGDEBUGF_P(PSTR("[RESET] Reset to factory defaults.\n"));
   deleteConfig();
   delay(1000);
   restartESP();
@@ -603,7 +603,7 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
   char message[len + 1];
   strlcpy(message, (char *)payload, len + 1);
   message[len] = '\0';
-  TDEBUG_PRINTF_P(PSTR("%sTopic: %s \tMessage: %s\n"), MQTT_STR, topic, message);
+  TLOGDEBUGF_P(PSTR("%sTopic: %s \tMessage: %s\n"), MQTT_STR, topic, message);
 
   char *command = strtok(message, " ");
 
@@ -696,13 +696,13 @@ void mqttCallback(String &topic, String &payload) {
 
 bool mqttConnect() {
   if (WiFi.status() != WL_CONNECTED) {
-    TDEBUG_PRINTF_P(PSTR("%sNo WiFi connection \n"), MQTT_STR);
+    TLOGDEBUGF_P(PSTR("%sNo WiFi connection \n"), MQTT_STR);
     return (mqttConnected = false);
   }
-  TDEBUG_PRINTF_P(PSTR("%sConnecting to MQTT... \n"), MQTT_STR);
+  TLOGDEBUGF_P(PSTR("%sConnecting to MQTT... \n"), MQTT_STR);
   mqttConnected = mqttClient.connected();
   if (!mqttConnected) {
-    TDEBUG_PRINTF_P(PSTR("%sConnecting to: \n\t%s\n\tPort: %d\n\tUser: "
+    TLOGDEBUGF_P(PSTR("%sConnecting to: \n\t%s\n\tPort: %d\n\tUser: "
                        "%s\n\tpass: %s\n"), MQTT_STR,
                   appSettings.mqttBroker, appSettings.mqttPort,
                   appSettings.mqttUser, appSettings.mqttPass);
@@ -718,7 +718,7 @@ bool mqttConnect() {
     if (mqttClient.connect(clientId.c_str(), appSettings.mqttUser,
                            appSettings.mqttPass)) {
       mqttConnections++;
-      TDEBUG_PRINTF_P(PSTR("%sConnected.\n"), MQTT_STR);
+      TLOGDEBUGF_P(PSTR("%sConnected.\n"), MQTT_STR);
       String topic;
       topic = addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicCommand);
       mqttClient.subscribe(topic.c_str());
@@ -730,10 +730,10 @@ bool mqttConnect() {
 #else
       err = int(mqttClient.lastError());
 #endif
-      TDEBUG_PRINTF_P(PSTR("%sConnection failed] rc = %d\n"), MQTT_STR, err);
+      TLOGDEBUGF_P(PSTR("%sConnection failed] rc = %d\n"), MQTT_STR, err);
     }
   } else {
-    TDEBUG_PRINTF_P(PSTR("%sAlready connected.\n"), MQTT_STR);
+    TLOGDEBUGF_P(PSTR("%sAlready connected.\n"), MQTT_STR);
   }
   return mqttConnected;
 }
@@ -744,14 +744,14 @@ bool _mqttSendMessage(const char *message) {
     statusString = "Sending...";
     String topic;
     topic = addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicStatus);
-    DEBUG_PRINTLN(topic.c_str());
+    LOGDEBUGLN(topic.c_str());
     result = (mqttClient.publish(topic.c_str(), message) == true);
     mqttClient.loop();
   }
   if (result) {
-    TDEBUG_PRINTF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
+    TLOGDEBUGF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
   } else {
-    TDEBUG_PRINTF_P(PSTR("%sError sending message.\n"), MQTT_STR);
+    TLOGDEBUGF_P(PSTR("%sError sending message.\n"), MQTT_STR);
   }
   return result;
 }
@@ -774,7 +774,7 @@ void _statusReport() {
              mqttConnections,
              volt);
 
-  DEBUG_PRINTF("\n[MQTT BUFFER] %s\n", buffer);
+  LOGDEBUGF("\n[MQTT BUFFER] %s\n", buffer);
 
   _mqttSendMessage(buffer);
 }
@@ -797,7 +797,7 @@ void _mqttLoop() {
     static uint32_t last_mqtt_check = 0;
     if ((last_mqtt_check == 0) || (millis() - last_mqtt_check) > 10000) {
       last_mqtt_check = millis();
-      TDEBUG_PRINTF_P(PSTR("%s(mqttloop) Not connected. Reconnecting.\n"), MQTT_STR);
+      TLOGDEBUGF_P(PSTR("%s(mqttloop) Not connected. Reconnecting.\n"), MQTT_STR);
       mqttConnect();
     }
   } else {
@@ -809,9 +809,9 @@ void _mqttLoop() {
 
 void initialize() {
   // check file system
-  TDEBUG_PRINTF_P(PSTR("[DEBUG] Checking file system.\n"));
+  TLOGDEBUGF_P(PSTR("[DEBUG] Checking file system.\n"));
   checkFileSystem();
-  TDEBUG_PRINTF_P(PSTR("[DEBUG] Print default configuration:\n"));
+  TLOGDEBUGF_P(PSTR("[DEBUG] Print default configuration:\n"));
   debugConfig();
 
   // loading configuration
@@ -821,23 +821,23 @@ void initialize() {
   initSSD1306();
 #endif
 
-  TDEBUG_PRINTF_P("[DEBUG] Printing info:\n"); 
-  TDEBUG_PRINTLN(getSystemInfoJson());
+  TLOGDEBUGF_P("[DEBUG] Printing info:\n"); 
+  TLOGDEBUGLN(getSystemInfoJson());
 
-  TDEBUG_PRINTF_P("[DEBUG] Setup oneButton.\n");
+  TLOGDEBUGF_P("[DEBUG] Setup oneButton.\n");
   oneButtonSetup();
 
   // setup wifi
-  TDEBUG_PRINTF_P("[DEBUG] Setup wifi.\n");
+  TLOGDEBUGF_P("[DEBUG] Setup wifi.\n");
   jwSetup();
 
   // setup OTA updates
-  TDEBUG_PRINTF_P("[DEBUG] Setup FOTA updater.\n");
+  TLOGDEBUGF_P("[DEBUG] Setup FOTA updater.\n");
   FOTA_Setup();
 
   // start time client
   // ! move it after wifi connection.
-  TDEBUG_PRINTF_P("[DEBUG] Starting ntp client.\n");
+  TLOGDEBUGF_P("[DEBUG] Starting ntp client.\n");
   configTime(MY_TIMEZONE, ntpServer);  // updated for > 2.7.0
   //configTime(0, 0, ntpServer);
   //setenv("TZ", TZ_INFO, 1);
@@ -849,7 +849,7 @@ void initialize() {
 }
 
 void startWiFiManager() {
-  TDEBUG_PRINTF_P("Starting wifi manager.\n");
+  TLOGDEBUGF_P("Starting wifi manager.\n");
   char buf[6];
   buf[0] = 0;
   WiFiManagerParameter custom_mqtt_broker("server", "mqtt server",
@@ -886,11 +886,11 @@ void startWiFiManager() {
   // at least 1.5.1 WiFi.mode(WIFI_STA);
 
   if (!wifiManager.startConfigPortal((char *)APP_NAME)) {
-    TDEBUG_PRINTF_P("failed to connect and hit timeout\n");
+    TLOGDEBUGF_P("failed to connect and hit timeout\n");
     restartESP();
   }
   // if you get here you have connected to the WiFi
-  TDEBUG_PRINTF_P("connected...yeey :)\n");
+  TLOGDEBUGF_P("connected...yeey :)\n");
   WiFi.printDiag(Serial);
   // save SSID and password to flash
   strcpy(appSettings.ssid, WiFi.SSID().c_str());

@@ -205,7 +205,7 @@ bool serialDataReceived() {
 
 bool mqttSendDeviceData(char *str) {
   if (mqttConnect()) {
-    DEBUG_PRINT(str);
+    LOGDEBUG(str);
 
     String topic;
     topic = String(appSettings.mqttTopic) + FPSTR(_topicStatus);
@@ -213,10 +213,10 @@ bool mqttSendDeviceData(char *str) {
     if (mqttClient.publish(topic.c_str(), str) == true) {
       mqttClient.loop();
       flashChipLed();      
-      TDEBUG_PRINTF_P(PSTR("[MQTT] Success sending message.\n"));
+      TLOGDEBUGF_P(PSTR("[MQTT] Success sending message.\n"));
       return true;
     } else {
-      TDEBUG_PRINTF_P(PSTR("[MQTT] Error sending message.\n"));
+      TLOGDEBUGF_P(PSTR("[MQTT] Error sending message.\n"));
     }
   }
   return false;
@@ -256,18 +256,18 @@ void mqttSendWindData() {
                timeToString().c_str(), windSpeedAverage, windSpeedMax,
                windSpeedMin, windDirectionAverage);
 
-    TDEBUG_PRINTF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
+    TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
 
     String topic;
     topic = String(appSettings.mqttTopic) + FPSTR(_topicData);
-    TDEBUG_PRINT(topic.c_str());
+    TLOGDEBUG(topic.c_str());
 
     if (mqttClient.publish(topic.c_str(), buffer) == true) {
       mqttClient.loop();
       flashChipLed();      
-      TDEBUG_PRINTF_P(PSTR("[MQTT] Success sending message.\n"));
+      TLOGDEBUGF_P(PSTR("[MQTT] Success sending message.\n"));
     } else {
-      TDEBUG_PRINTF_P(PSTR("[MQTT] Error sending message.\n"));
+      TLOGDEBUGF_P(PSTR("[MQTT] Error sending message.\n"));
     }
   }
 }
@@ -293,15 +293,15 @@ void mainLoop() {
 }
 
 void isAlive() {
-  TDEBUG_PRINTF_P(PSTR("[WD] Checking alive status...\n"));
+  TLOGDEBUGF_P(PSTR("[WD] Checking alive status...\n"));
    // if there is no heartbeat for 15 minutes, restart ESP
   if (millis() - lastHeartBeat > 900000) 
   {
-    TDEBUG_PRINTF_P(PSTR("[WD] No HeartBeat for 15 minutes. Restarting...\n"));
+    TLOGDEBUGF_P(PSTR("[WD] No HeartBeat for 15 minutes. Restarting...\n"));
     ESP.restart();
     delay(1000);
   }
-  TDEBUG_PRINTF_P(PSTR("[WD] OK.\n"));
+  TLOGDEBUGF_P(PSTR("[WD] OK.\n"));
 }
 
 void switchMosfet(bool value) {
@@ -332,7 +332,7 @@ void setup() {
   digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
 
   Serial.begin(115200);
-  TDEBUG_PRINTF_P(PSTR("\n\nStarting %s\n"), APP_NAME);
+  TLOGDEBUGF_P(PSTR("\n\nStarting %s\n"), APP_NAME);
   Serial.setDebugOutput(true);
   
 
@@ -387,7 +387,7 @@ void loop() {
         parseDeviceData(receivedChars);
         break;
       default:
-        TDEBUG_PRINTF_P(PSTR("[PARSE] Error %d parsing wind data.\n"), sdr);
+        TLOGDEBUGF_P(PSTR("[PARSE] Error %d parsing wind data.\n"), sdr);
         break;
     }
     serialNewData = false;
