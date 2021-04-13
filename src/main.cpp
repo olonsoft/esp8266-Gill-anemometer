@@ -66,6 +66,12 @@ float windSpeedAverage;
 float windSpeedMax;
 float windSpeedMin;
 
+const char dataWindPayload[] PROGMEM =
+    "{\"time\":\"%s\","
+    "\"speed\":\"%.2f\","
+    "\"dir\":\"%d\""
+    "}";
+
 const char dataPayload[] PROGMEM =
     "{\"time\":\"%s\","
     "\"speed\":\"%.2f\","
@@ -248,6 +254,29 @@ bool getAndResetWindValues() {
   return result;
 }
 
+void mqttSendCurrentWindData(float speed, int direction) {
+  if (mqttConnect()) {
+    // char buffer[strlen_P(payload) + 30];
+    char buffer[100] = {};
+    snprintf_P(buffer, sizeof(buffer), dataWindPayload,
+               timeToString().c_str(), speed, direction);
+
+    TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
+
+    String topic;
+    topic = String(appSettings.mqttTopic) + FPSTR(_topicWind);
+    TLOGDEBUGF_P(PSTR("[MQTT TOPIC] %s\n"), topic.c_str());
+
+    if (mqttClient.publish(topic.c_str(), buffer) == true) {
+      mqttClient.loop();
+      flashChipLed();      
+      TLOGDEBUGF_P(PSTR("[MQTT] Success sending message.\n"));
+    } else {
+      TLOGDEBUGF_P(PSTR("[MQTT] Error sending message.\n"));
+    }
+  }
+}
+
 void mqttSendWindData() {
   if (mqttConnect()) {
     // char buffer[strlen_P(payload) + 30];
@@ -260,8 +289,8 @@ void mqttSendWindData() {
 
     String topic;
     topic = String(appSettings.mqttTopic) + FPSTR(_topicData);
-    TLOGDEBUG(topic.c_str());
-
+    TLOGDEBUGF_P(PSTR("[MQTT TOPIC] %s\n"), topic.c_str());
+    
     if (mqttClient.publish(topic.c_str(), buffer) == true) {
       mqttClient.loop();
       flashChipLed();      
@@ -343,9 +372,7 @@ void setup() {
   gill.setSpeedUnit(wsKnots);
   swSer.begin(SWSERIAL_BAUD_RATE, SWSERIAL_8N1, PIN_SERIAL_RX, PIN_SERIAL_TX, false,
               SERIAL_BUFFER_SIZE);
-              
-  // swSer.enableRx(false);
-  // enableSerial(false);
+  enableSerial(false);
 }
 
 void loop() {
@@ -369,17 +396,22 @@ void loop() {
   mainLoop();
   lastHeartBeat = millis();
 
-  // switch on mosfet only first time the mqttClient is connected
-  if (!mosfetOn && mqttClient.connected()) {
+  // switch on mosfet only when mqttClient is connected
+  if (mqttClient.connected() && (WiFi.status() == WL_CONNECTED)) {
+    enableSerial(true);
     switchMosfet(MOSFET_ON);
   }
-  // enableSerial(mqttClient.connected());
-
+  else {
+    switchMosfet(MOSFET_OFF);
+    enableSerial(false);
+  }
+  
   if (serialDataReceived()) {
     flashOnBoardLed();
     SerialDataResult_t sdr = gill.decodeSerialData(receivedChars);
     switch (sdr) {
       case srOK:
+        mqttSendCurrentWindData(gill.getSpeed(), gill.getDirection());
         addDeviceValues(gill.getSpeed(), gill.getDirection());
         break;
       case srNoControlChars:  // if there is no control char, it's a message

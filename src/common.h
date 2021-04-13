@@ -19,7 +19,7 @@
 #define BUTTON1 D3  // GPIO 0
 
 #define APP_NAME    "Anemometer"
-#define APP_VERSION "1.1.3"  // Updated 2020-15-12
+#define APP_VERSION "1.1.5"  // Updated 2021-04-06
 #define APP_AUTHOR  "dimitris19@gmail.com"
 #define APP_WEBSITE "http://studio19.gr"
 
@@ -77,6 +77,7 @@ bool       mqttConnected = false;
 const char _topicData[]    PROGMEM = {"data"};
 const char _topicStatus[]  PROGMEM = {"stat"};
 const char _topicCommand[] PROGMEM = {"cmd"};
+const char _topicWind[]    PROGMEM = {"wind"};
 
 const char _statusPayload[] PROGMEM =
     "{\"devi\":\"%s\","
@@ -446,9 +447,9 @@ void jwSetup() {
   // Add wifi network saved in settings
   jw.addNetwork(appSettings.ssid, appSettings.password);
   // add additional wifi networks
-  jw.addNetwork("ikaros1", "ikaros2020");
-  jw.addNetwork("ikaros2", "ikaros2020");
-  jw.addNetwork("ikaros3", "ikaros2020");
+  jw.addNetwork("ikaros3", "ikaros2021");
+  jw.addNetwork("ikaros3", "ikaros2022");
+  jw.addNetwork("ikaros3", "ikaros2023");
   jw.addNetwork("Support", "12345678");  
   // Add an open network
   jw.addNetwork("open");
