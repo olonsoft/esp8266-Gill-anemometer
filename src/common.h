@@ -19,7 +19,7 @@
 #define BUTTON1 D3  // GPIO 0
 
 #define APP_NAME    "Anemometer"
-#define APP_VERSION "1.1.5"  // Updated 2021-04-06
+#define APP_VERSION "1.1.6"  // Updated 2021-04-26
 #define APP_AUTHOR  "dimitris19@gmail.com"
 #define APP_WEBSITE "http://studio19.gr"
 
@@ -447,10 +447,9 @@ void jwSetup() {
   // Add wifi network saved in settings
   jw.addNetwork(appSettings.ssid, appSettings.password);
   // add additional wifi networks
+  jw.addNetwork("Yianna Caravel", "2810824724");
   jw.addNetwork("ikaros3", "ikaros2021");
-  jw.addNetwork("ikaros3", "ikaros2022");
-  jw.addNetwork("ikaros3", "ikaros2023");
-  jw.addNetwork("Support", "12345678");  
+  jw.addNetwork("Support", "12345678");
   // Add an open network
   jw.addNetwork("open");
 }
@@ -641,12 +640,12 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
 
   if (strcmp("broker", command) ==
       0) {  // command is: broker user:password@domain_or_ip:port
-    char *userid = strtok(NULL, ":");
-    char *password = strtok(NULL, "@");
-    char *url = strtok(NULL, ":");
-    char *port = strtok(NULL, "");
+    char *userid = strtok(nullptr, ":");
+    char *password = strtok(nullptr, "@");
+    char *url = strtok(nullptr, ":");
+    char *port = strtok(nullptr, "");
 
-    if (userid != NULL) {
+    if (userid != nullptr) {
       if (strcmp("*", userid) > 0) {  // if user or password is blank, use *
         appSettings.mqttUser[0] = 0;
       } else {
@@ -654,17 +653,17 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
       }
     }
 
-    if (password != NULL) {
+    if (password != nullptr) {
       if (strcmp("*", password) > 0) {
         appSettings.mqttPass[0] = 0;
       } else {
         strcpy(appSettings.mqttPass, password);
       }
     }
-    if (url != NULL) {
+    if (url != nullptr) {
       strcpy(appSettings.mqttBroker, url);
     }
-    if (port != NULL) {
+    if (port != nullptr) {
       appSettings.mqttPort = atoi(port);
     }
     debugConfig();
@@ -673,8 +672,8 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
   }
 
   if (strcmp("interval", command) == 0) {
-    char *value = strtok(NULL, "");
-    if (value != NULL) {
+    char *value = strtok(nullptr, "");
+    if (value != nullptr) {
       appSettings.mqttTopicDataInterval = atoi(value);
       _mqttSendMessage("Saving new interval.");
       saveConfig();

@@ -32,7 +32,7 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
   ++data;
 
   // checksum
-  char scs = (char)strtol(data, 0, 16);
+  char scs = (char)strtol(data, nullptr, 16);
   TLOGDEBUGF_P(PSTR("msg: %s cs: %X crc: %X\n"), msg, cs, scs);
   if (scs != cs)
     return srCheckSumError;
@@ -45,7 +45,7 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
 
     char *tofree, *tok, *end;
     tofree = end = strdup(msg);
-    while ((tok = strsep(&end, delim)) != NULL && token_count < MAX_TOKENS) {
+    while ((tok = strsep(&end, delim)) != nullptr && token_count < MAX_TOKENS) {
       switch (token_count) {
         case 0:
           deviceID = tok[0];
@@ -63,7 +63,7 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
           if (strcmp("V", tok) == 0) {  // NMEA data Void
             error = 11;
           } else {
-            error = (int)strtol(tok, NULL, 16);
+            error = (int)strtol(tok, nullptr, 16);
           }
         default:
           break;
