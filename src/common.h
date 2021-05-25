@@ -16,12 +16,8 @@
 #include <JustWifi.h>
 #include <JustWifiUtils.h>
 #include <onebutton.h>
-#define BUTTON1 D3  // GPIO 0
+//#define BUTTON1 D3  // GPIO 0
 
-#define APP_NAME    "Anemometer"
-#define APP_VERSION "1.1.6"  // Updated 2021-04-26
-#define APP_AUTHOR  "dimitris19@gmail.com"
-#define APP_WEBSITE "http://studio19.gr"
 
 typedef struct {
   // general

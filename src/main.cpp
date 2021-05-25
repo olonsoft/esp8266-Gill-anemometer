@@ -8,6 +8,7 @@
 */         
 
 #include <Arduino.h>
+#include <project_config.h>
 #include <ESPcrashSave.h>
 #include <Gill.h>
 #include <SoftwareSerial.h>
@@ -17,9 +18,6 @@
 #include <helper.h>
 
 
-#define SWSERIAL_BAUD_RATE 9600
-#define SERIAL_BUFFER_SIZE 256
-
 ESPCrashSave crashSave;
 String crash_post_url =
     "http://studio19.gr/olonsoft/firmware/anemometer/debug.php";  // Location
@@ -27,25 +25,7 @@ String crash_post_url =
                                                                   // images are
                                                                   // POSTED
 
-// ======== pin definitions ========
-// LED_BUILTIN          D4    // gpio2 already defined in pins_arduino.h
-#define LED_BUILTIN_ON  LOW
-#define LED_BUILTIN_OFF HIGH
 
-#define LED_ONBOARD     D0  // gpio16 pcb led
-#define LED_ONBOARD_ON  LOW
-#define LED_ONBOARD_OFF HIGH
-
-#define MOSFET_PIN      D7  // gpio13
-#define MOSFET_ON       HIGH
-#define MOSFET_OFF      LOW
-
-#define PIN_SERIAL_RX   D5  // gpio14
-#define PIN_SERIAL_TX   D6  // gpio12
-
-// oled i2c SCL pin     D1    // gpio5
-// oled i2c SDA pin     D2    // gpio4 
-// #define BUTTON1      D3    // gpio0
 
 // ===================== Serial ======================
 SoftwareSerial swSer;
@@ -161,12 +141,6 @@ void oledLoop() {
   }
 }
 
-void flashOnBoardLed() {
-  digitalWrite(LED_ONBOARD, LED_ONBOARD_ON);
-  onBoardLedTime = millis();
-  onBoardLedOn = true;
-}
-
 void flashChipLed() {
   digitalWrite(LED_BUILTIN, LED_BUILTIN_ON);
   chipLedTime = millis();
@@ -175,11 +149,6 @@ void flashChipLed() {
 
 void ledsLoop() {
   uint32_t t = millis();
-
-  if (onBoardLedOn && t - onBoardLedTime > 100) {
-    digitalWrite(LED_ONBOARD, LED_ONBOARD_OFF);
-    onBoardLedOn = false;
-  }
 
   if (chipLedOn && t - chipLedTime > 100) {
     digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
@@ -354,8 +323,9 @@ void setup() {
   switchMosfet(MOSFET_OFF);
 
   // set led pins as output
-  pinMode(LED_ONBOARD, OUTPUT);
-  digitalWrite(LED_ONBOARD, LED_ONBOARD_OFF);
+  // removed in later versions. I used this pin for wake up from sleep
+  //pinMode(LED_ONBOARD, OUTPUT);
+  //digitalWrite(LED_ONBOARD, LED_ONBOARD_OFF);
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
@@ -407,7 +377,7 @@ void loop() {
   }
   
   if (serialDataReceived()) {
-    flashOnBoardLed();
+    flashChipLed();
     SerialDataResult_t sdr = gill.decodeSerialData(receivedChars);
     switch (sdr) {
       case srOK:
