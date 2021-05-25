@@ -188,7 +188,7 @@ bool formatFS() {
   } else {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Error formating file system.\n"));
     return false;
-  }
+  }  
 }
 
 void checkFileSystem() {
@@ -204,7 +204,7 @@ void checkFileSystem() {
 
 bool saveConfig() {
   if (!ESP_FSExist) return false;
-
+  checkFileSystem(); // ? I had to mount again FS. Is it a bug?
   DynamicJsonDocument doc(1024);
 
   doc[F("ssid")] = appSettings.ssid;
@@ -221,7 +221,7 @@ bool saveConfig() {
 
   serializeJsonPretty(doc, Serial);
 
-  File configFile = ESP_FS.open(CONFIGFILE, "w");
+  File configFile = ESP_FS.open(String(CONFIGFILE), "w");
 
   if (!configFile) {
     TLOGDEBUGF_P(
@@ -248,13 +248,13 @@ bool loadConfig() {
   TLOGDEBUGF_P(PSTR("[ESP_FS] Loading config from file [%s].\n"), CONFIGFILE);
   if (!ESP_FSExist) return false;
 
-  if (!ESP_FS.exists(CONFIGFILE)) {
+  if (!ESP_FS.exists(String(CONFIGFILE))) {
     TLOGDEBUGF_P(PSTR("Config file does not exist. Creating default. [%s]\n"),
                   CONFIGFILE);
     return (saveConfig());
   }
 
-  File configFile = ESP_FS.open(CONFIGFILE, "r");
+  File configFile = ESP_FS.open(String(CONFIGFILE), "r");
   if (!configFile) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Failed to open config file [%s].\n"),
                   CONFIGFILE);
@@ -262,6 +262,8 @@ bool loadConfig() {
   }
 
   size_t size = configFile.size();
+  TLOGDEBUGF_P(PSTR("[ESP_FS] Config file size: %d\n"),size);
+
   if (size > 1024) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Config file size is too large.\n"));
     return false;
@@ -310,7 +312,8 @@ bool loadConfig() {
 
 bool deleteConfig() {
   if (!ESP_FSExist) return false;
-  if (!ESP_FS.exists(CONFIGFILE)) {
+  checkFileSystem(); // ? I had to mount again FS. Is it a bug?
+  if (!ESP_FS.exists(String(CONFIGFILE))) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Config file [%s] does not exist.\n"),
                   CONFIGFILE);
     return false;
@@ -318,7 +321,7 @@ bool deleteConfig() {
 
   TLOGDEBUGF_P(PSTR("[ESP_FS] Deleting config file [%s].\n"), CONFIGFILE);
 
-  if (ESP_FS.remove(CONFIGFILE)) {
+  if (ESP_FS.remove(String(CONFIGFILE))) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Config File deleted.\n"));
     return true;
   } else {
