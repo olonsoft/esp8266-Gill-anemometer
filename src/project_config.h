@@ -1,5 +1,5 @@
 #define APP_NAME    "Anemometer"
-#define APP_VERSION "1.1.7"  // Updated 2021-05-25
+#define APP_VERSION "1.1.8"  // Updated 2021-06-03
 #define APP_AUTHOR  "dimitris19@gmail.com"
 #define APP_WEBSITE "https://github.com/olonsoft/esp8266-Gill-anemometer"
 
