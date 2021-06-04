@@ -1,5 +1,5 @@
 #include <arduino.h>
-#include <helper.h>
+#include <helper_general.h>
 #include <WindFunc.h>
 
 float WindFunc::convertUnit(float speed, windSpeedUnit_t fromUnit, windSpeedUnit_t toUnit)

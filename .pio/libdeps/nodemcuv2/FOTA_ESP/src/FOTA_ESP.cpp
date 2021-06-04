@@ -1,7 +1,7 @@
 #include "FOTA_ESP.h"
 #include <functional>
 #include <ArduinoJson.h>
-#include <helper.h>
+#include <helper_general.h>
 
 #ifndef TERMINAL_IN_COLOR
 // #define TERMINAL_IN_COLOR
@@ -101,7 +101,7 @@ String FOTAClientClass::_getPayload() {
     http.addHeader(F("X-ESP-FIRMWARE-VERSION"), _currentFwVersion);
     http.addHeader(F("X-ESP-FS-VERSION"), _currentFsVersion);
     //http.addHeader(F("X-ESP Build"), String(__UNIX_TIMESTAMP__))
-    http.addHeader(F("X-ESP-CHIPID"), getChipIdHex());
+    http.addHeader(F("X-ESP-CHIPID"), helper_general::getChipIdHex());
     http.addHeader(F("X-ESP-free-space"), String(ESP.getFreeSketchSpace()));
     http.addHeader(F("X-ESP-sketch-size"), String(ESP.getSketchSize()));
 

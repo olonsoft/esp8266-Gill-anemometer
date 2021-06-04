@@ -5,9 +5,9 @@
 #include <FOTA_ESP.h>
 #include <FS.h>
 #include <WiFiManager.h>  //https://github.com/tzapu/WiFiManager
-#include <helper.h>
+#include <helper_general.h>
 #include <helper_wifi.h>
-#include <time_functions.h>
+#include <helper_time.h>
 #include <TZ.h>           // for TimeZone define
 
 // needed for justwifi
@@ -403,7 +403,7 @@ int saveFlashWiFi(const String& ssid, const String& pass) {
 void onFOTAMessage(fota_t t, char *msg) { TLOGDEBUG(msg); }
 
 void FOTA_Setup() {
-  FOTAClient.setFOTAParameters(addTrailingSlash(String(appSettings.firmwareUpdateServer)).c_str(), APP_NAME,
+  FOTAClient.setFOTAParameters(helper_general::addTrailingSlash(String(appSettings.firmwareUpdateServer)).c_str(), APP_NAME,
                                  APP_VERSION, APP_VERSION);
   FOTAClient.onMessage(onFOTAMessage);
 }
@@ -582,7 +582,7 @@ void _oledLoop() {
   last_check = millis();
   if (screenOn) {
     _oledUpdateStatusText();
-    _drawWifiQuality( wifiGetRssiAsQuality(WiFi.RSSI()) );
+    _drawWifiQuality( helper_wifi::wifiGetRssiAsQuality(WiFi.RSSI()) );
     display.display();
   }
 }
@@ -706,7 +706,7 @@ bool mqttConnect() {
                   appSettings.mqttBroker, appSettings.mqttPort,
                   appSettings.mqttUser, appSettings.mqttPass);
     String clientId = (char *)APP_NAME;
-    clientId += "-" + getChipIdHex();
+    clientId += "-" + helper_general::getChipIdHex();
 #ifdef USE_PUBSUBCLIENT
     mqttClient.setServer(appSettings.mqttBroker, appSettings.mqttPort);
     mqttClient.setCallback(mqttCallback);
@@ -719,7 +719,7 @@ bool mqttConnect() {
       mqttConnections++;
       TLOGDEBUGF_P(PSTR("%sConnected.\n"), MQTT_STR);
       String topic;
-      topic = addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicCommand);
+      topic = helper_general::addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicCommand);
       mqttClient.subscribe(topic.c_str());
       mqttConnected = true;
     } else {
@@ -742,7 +742,7 @@ bool _mqttSendMessage(const char *message) {
   if (mqttConnect()) {
     statusString = "Sending...";
     String topic;
-    topic = addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicStatus);
+    topic = helper_general::addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicStatus);
     LOGDEBUGLN(topic.c_str());
     result = (mqttClient.publish(topic.c_str(), message) == true);
     mqttClient.loop();
@@ -821,7 +821,7 @@ void initialize() {
 #endif
 
   TLOGDEBUGF_P("[DEBUG] Printing info:\n"); 
-  TLOGDEBUGLN(getSystemInfoJson());
+  TLOGDEBUGLN(helper_general::getSystemInfoJson());
 
   TLOGDEBUGF_P("[DEBUG] Setup oneButton.\n");
   oneButtonSetup();

@@ -1,6 +1,6 @@
 #include <Gill.h>
 #include <arduino.h>
-#include <helper.h>
+#include <helper_general.h>
 
 #define STX '\x02'
 #define ETX '\x03'

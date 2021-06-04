@@ -1,7 +1,7 @@
 #pragma once
 
 #define APP_NAME    "Anemometer"
-#define APP_VERSION "1.1.8"  // Updated 2021-06-03
+#define APP_VERSION "1.1.9"  // Updated 2021-06-04
 #define APP_AUTHOR  "dimitris19@gmail.com"
 #define APP_WEBSITE "https://github.com/olonsoft/esp8266-Gill-anemometer"
 
@@ -16,7 +16,7 @@
 #define LED_BUILTIN_ON  LOW
 #define LED_BUILTIN_OFF HIGH
 
-// -> note: I connected GPIO16 to Reset so the board can sleep in needed.
+// -> note: I connected GPIO16 to Reset so the board can sleep if needed.
 //#define LED_ONBOARD     D0    // gpio16 pcb led
 //#define LED_ONBOARD_ON  LOW
 //#define LED_ONBOARD_OFF HIGH

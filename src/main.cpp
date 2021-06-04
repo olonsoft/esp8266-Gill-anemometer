@@ -12,8 +12,8 @@
 #include <ESPcrashSave.h>
 #include <SoftwareSerial.h>
 #include <Ticker.h>
+#include <helper_general.h>
 #include <common.h>
-#include <helper.h>
 #include <WindFunc.h>
 #include <Gill.h>
 
