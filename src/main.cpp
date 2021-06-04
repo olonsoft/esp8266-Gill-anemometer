@@ -228,7 +228,7 @@ void mqttSendCurrentWindData(float speed, int direction) {
     // char buffer[strlen_P(payload) + 30];
     char buffer[100] = {};
     snprintf_P(buffer, sizeof(buffer), dataWindPayload,
-               timeToString().c_str(), speed, direction);
+               helper_time::timeToString().c_str(), speed, direction);
 
     TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
 
@@ -251,7 +251,7 @@ void mqttSendWindData() {
     // char buffer[strlen_P(payload) + 30];
     char buffer[100] = {};
     snprintf_P(buffer, sizeof(buffer), dataPayload,
-               timeToString().c_str(), windSpeedAverage, windSpeedMax,
+               helper_time::timeToString().c_str(), windSpeedAverage, windSpeedMax,
                windSpeedMin, windDirectionAverage);
 
     TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);

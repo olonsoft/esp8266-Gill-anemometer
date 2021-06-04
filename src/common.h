@@ -1,10 +1,10 @@
 #pragma once
 
+#include <arduino.h>
 #include <ArduinoJson.h>
 #include <FOTA_ESP.h>
 #include <FS.h>
 #include <WiFiManager.h>  //https://github.com/tzapu/WiFiManager
-#include <arduino.h>
 #include <helper.h>
 #include <helper_wifi.h>
 #include <time_functions.h>
@@ -763,7 +763,7 @@ void _statusReport() {
              (char *)APP_VERSION, WiFi.SSID().c_str(),
              "*****",  // WiFi.psk().c_str(),
              WiFi.BSSIDstr().c_str(), WiFi.RSSI(),
-             timeToString().c_str(), getUpTimeString().c_str(),
+             helper_time::timeToString().c_str(), helper_time::getUpTimeString().c_str(),
              ESP.getFreeHeap(),
              String(ESP.getResetReason()).c_str(),
              String(appSettings.mqttBroker).c_str(), 
