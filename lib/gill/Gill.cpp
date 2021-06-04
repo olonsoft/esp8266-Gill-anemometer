@@ -11,7 +11,7 @@ WindFunc wfGill;
 SerialDataResult_t Gill::decodeSerialData(char *data) {
   char msg[25];
   // start of text
-  if (*data != STX) return srNoControlChars;
+  if (*data != STX) return SerialDataResult_t::srNoControlChars;
   ++data;
 
   // actual message
@@ -22,20 +22,20 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
     msg[i++] = *data++;
 
     if (i > 18) {  // 18
-      return srLongMessageError;
+      return SerialDataResult_t::srLongMessageError;
     }
   }
   msg[i - 1] = '\0';
 
   // end of text
-  if (*data != ETX) return srNoControlChars;
+  if (*data != ETX) return SerialDataResult_t::srNoControlChars;
   ++data;
 
   // checksum
   char scs = (char)strtol(data, nullptr, 16);
   TLOGDEBUGF_P(PSTR("msg: %s cs: %X crc: %X\n"), msg, cs, scs);
   if (scs != cs)
-    return srCheckSumError;
+    return SerialDataResult_t::srCheckSumError;
   else {
     const char *delim = ",";
     int token_count = 0;
@@ -79,34 +79,34 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
                     _speed, unit, error);
 
     if (error > 0) {
-      return srDeviceError;
+      return SerialDataResult_t::srDeviceError;
     }
     windSpeedUnit_t receivedUnit;
     switch (unit) {
       case 'M':
-        receivedUnit = wsMetersPerSecond;
+        receivedUnit = windSpeedUnit_t::wsMetersPerSecond;
         break;
       case 'N':
-        receivedUnit = wsKnots;
+        receivedUnit = windSpeedUnit_t::wsKnots;
         break;
       case 'P':
-        receivedUnit = wsMilesPerHour;
+        receivedUnit = windSpeedUnit_t::wsMilesPerHour;
         break;
       case 'K':
-        receivedUnit = wsKmPerHour;
+        receivedUnit = windSpeedUnit_t::wsKmPerHour;
         break;
       case 'F':
-        receivedUnit = wsFeetPerMinute;
+        receivedUnit = windSpeedUnit_t::wsFeetPerMinute;
         break;
       default:
-        receivedUnit = wsMetersPerSecond;
+        receivedUnit = windSpeedUnit_t::wsMetersPerSecond;
         break;
     }
     _speed = wfGill.convertUnit(_speed, receivedUnit, _windSpeedUnit);
     TLOGDEBUGF_P(PSTR("Converted: %.2f\n"), _speed);
   }
 
-  return srOK;
+  return SerialDataResult_t::srOK;
 }
 
 void Gill::setSpeedUnit(windSpeedUnit_t speedUnit) {

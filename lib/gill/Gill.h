@@ -3,14 +3,14 @@
 
 #include <WindFunc.h>  // needed for units conversion
 
-typedef enum
+enum class SerialDataResult_t
 {                     // received serial data status
   srOK,               // is OK. WindSpeed and WindDirection were extracted.
   srNoControlChars,   // do not contain control characters
   srCheckSumError,    // checksum error
   srLongMessageError, // is longer than desired
   srDeviceError       // contain Device Error flag
-} SerialDataResult_t;
+};
 
 class Gill
 {

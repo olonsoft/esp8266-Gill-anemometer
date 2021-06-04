@@ -10,19 +10,19 @@ float WindFunc::convertUnit(float speed, windSpeedUnit_t fromUnit, windSpeedUnit
   {
     switch (fromUnit)
     {
-    case wsMetersPerSecond:
+    case windSpeedUnit_t::wsMetersPerSecond:
       tmpKmPerHour = 3.6f * speed;
       break;
-    case wsKnots:
+    case windSpeedUnit_t::wsKnots:
       tmpKmPerHour = 1.852f * speed;
       break;
-    case wsMilesPerHour:
+    case windSpeedUnit_t::wsMilesPerHour:
       tmpKmPerHour = 1.6093f * speed;
       break;
-    case wsKmPerHour:
+    case windSpeedUnit_t::wsKmPerHour:
       tmpKmPerHour = speed;
       break;
-    case wsFeetPerMinute:
+    case windSpeedUnit_t::wsFeetPerMinute:
       tmpKmPerHour = 0.0183f * speed;
       break;
     default:
@@ -30,19 +30,19 @@ float WindFunc::convertUnit(float speed, windSpeedUnit_t fromUnit, windSpeedUnit
     }
     switch (toUnit)
     {
-    case wsMetersPerSecond:
+    case windSpeedUnit_t::wsMetersPerSecond:
       result = tmpKmPerHour * 0.2777f;
       break;
-    case wsKnots:
+    case windSpeedUnit_t::wsKnots:
       result = tmpKmPerHour * 0.5399f;
       break;
-    case wsMilesPerHour:
+    case windSpeedUnit_t::wsMilesPerHour:
       result = tmpKmPerHour * 0.6213f;
       break;
-    case wsKmPerHour:
+    case windSpeedUnit_t::wsKmPerHour:
       result = tmpKmPerHour;
       break;
-    case wsFeetPerMinute:
+    case windSpeedUnit_t::wsFeetPerMinute:
       result = tmpKmPerHour * 54.6806f;
       break;
     default:

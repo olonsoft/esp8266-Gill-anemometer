@@ -10,13 +10,12 @@
 #include <Arduino.h>
 #include <project_config.h>
 #include <ESPcrashSave.h>
-#include <Gill.h>
 #include <SoftwareSerial.h>
 #include <Ticker.h>
-#include <WindFunc.h>
 #include <common.h>
 #include <helper.h>
-
+#include <WindFunc.h>
+#include <Gill.h>
 
 ESPCrashSave crashSave;
 String crash_post_url =
@@ -339,7 +338,7 @@ void setup() {
   initialize();
   // app specific functions
 
-  gill.setSpeedUnit(wsKnots);
+  gill.setSpeedUnit(windSpeedUnit_t::wsKnots);
   swSer.begin(SWSERIAL_BAUD_RATE, SWSERIAL_8N1, PIN_SERIAL_RX, PIN_SERIAL_TX, false,
               SERIAL_BUFFER_SIZE);
   enableSerial(false);
@@ -380,11 +379,11 @@ void loop() {
     flashChipLed();
     SerialDataResult_t sdr = gill.decodeSerialData(receivedChars);
     switch (sdr) {
-      case srOK:
+      case SerialDataResult_t::srOK:
         mqttSendCurrentWindData(gill.getSpeed(), gill.getDirection());
         addDeviceValues(gill.getSpeed(), gill.getDirection());
         break;
-      case srNoControlChars:  // if there is no control char, it's a message
+      case SerialDataResult_t::srNoControlChars:  // if there is no control char, it's a message
                               // from Gill. Sent it to mqtt status.
         parseDeviceData(receivedChars);
         break;

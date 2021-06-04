@@ -5,14 +5,14 @@
 
 #define DEG2RAD 0.017453292f // M_PI / 180.0f; // convert degrees to radian
 
-typedef enum
+enum class windSpeedUnit_t
 {
   wsMetersPerSecond,
   wsKnots,
   wsMilesPerHour,
   wsKmPerHour,
   wsFeetPerMinute
-} windSpeedUnit_t;
+};
 
 class WindFunc
 {

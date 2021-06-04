@@ -1,3 +1,5 @@
+#pragma once
+
 #define APP_NAME    "Anemometer"
 #define APP_VERSION "1.1.8"  // Updated 2021-06-03
 #define APP_AUTHOR  "dimitris19@gmail.com"
