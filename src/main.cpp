@@ -18,13 +18,6 @@
 #include <Gill.h>
 
 ESPCrashSave crashSave;
-String crash_post_url =
-    "http://studio19.gr/olonsoft/firmware/anemometer/debug.php";  // Location
-                                                                  // where
-                                                                  // images are
-                                                                  // POSTED
-
-
 
 // ===================== Serial ======================
 SoftwareSerial swSer;
@@ -351,8 +344,8 @@ void loop() {
     firstWiFiConnection = false;
     if (crashSave.crashLogFileExists()) {
       crashSave.printCrashLog();
-      crashSave.sendCrashLogToWeb(crash_post_url, "1919");
-      if (crashSave.getFSFreeSpace() < 512) {
+      if (crashSave.sendCrashLogToWeb(CRASH_POST_URL, CRASH_POST_PASSWORD) == 200 
+          || crashSave.getFSFreeSpace() < 512) {
         crashSave.clearCrashLog();
       }
     }

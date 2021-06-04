@@ -5,6 +5,9 @@
 #define APP_AUTHOR  "dimitris19@gmail.com"
 #define APP_WEBSITE "https://github.com/olonsoft/esp8266-Gill-anemometer"
 
+// Location where debug log is saved                                                                
+#define CRASH_POST_URL "http://studio19.gr/olonsoft/firmware/anemometer/debug.php"
+#define CRASH_POST_PASSWORD "1919"
 
 // ======= Software Serial =======
 #define SWSERIAL_BAUD_RATE 9600
