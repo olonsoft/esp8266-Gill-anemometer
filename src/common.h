@@ -16,10 +16,8 @@
 #include <JustWifi.h>
 #include <JustWifiUtils.h>
 #include <onebutton.h>
-//#define BUTTON1 D3  // GPIO 0
 
-
-typedef struct {
+struct AppSettings {
   // general
   char     ssid[31];
   char     password[63];
@@ -32,22 +30,21 @@ typedef struct {
   uint16_t mqttTopicStatusInterval;
   char     firmwareUpdateServer[80];
   uint16_t firmwareUpdateInterval;
-} appSettings_t;
+};
 
-appSettings_t appSettings = {
-    "ssid",                            // wifi to connect
-    "wifipass",                        // wifi password
-    "test.mosquitto.org",              // mqtt broker
+AppSettings appSettings = {
+    DEFAULT_WIFI1_SSID,                // wifi to connect
+    DEFAULT_WIFI1_PSW,                 // wifi password
+    MQTT_BROKER,                       // mqtt broker
     1883,                              // mqtt port
-    "",                                // mqtt user
-    "",                                // mqtt password
-    "olonsoft/devices/anemometer/gill01/", // mqtt topic
+    MQTT_USER,                         // mqtt user
+    MQTT_PSW,                          // mqtt password
+    MQTT_TOPIC,                        // mqtt topic
     60,                                // data topic update interval
     600,                               // status topic update interval
-    "http://fw.crete.ovh/anemometer/gill01", // firmware url
+    FIRMWARE_URL,                      // firmware url
     900};                              // firmware update check interval
 
-#define CONFIGFILE "/config.json"
 
 #define SEND_DATA 1
 
@@ -67,9 +64,8 @@ appSettings_t appSettings = {
 #include <MQTT.h>
 #endif
 
-uint32_t   _lastMQTTloop = 0;
-uint16_t   mqttConnections;
-bool       mqttConnected = false;
+uint16_t   _mqtt_connections;
+bool       _mqtt_connected = false;
 const char _topicData[]    PROGMEM = {"data"};
 const char _topicStatus[]  PROGMEM = {"stat"};
 const char _topicCommand[] PROGMEM = {"cmd"};
@@ -105,7 +101,7 @@ MQTTClient mqttClient(512);
 
 #endif  // MQTT_ENABLED
 
-String statusString = "Starting";
+String _status_text = "Starting";
 
 #define OLED1306
 
@@ -122,8 +118,7 @@ int screenW               = 128;
 int screenYH              = 16;   // top yellow part is 16 px height
 int screenH               = 64;
 bool screenOn             = true;
-uint32_t lastTimeScreenOn = 0;
-uint32_t screenSaverTime  = 120;  // seconds
+uint32_t screenOnTime     = 0;
 #endif
 
 // ============================== time library ================================
@@ -138,7 +133,7 @@ const char *ntpServer = "gr.pool.ntp.org";
 // =========================== onebutton ======================================
 
 OneButton button1(BUTTON1, true);
-uint32_t longPressStart = 0;
+uint32_t _longpress_start_time = 0;
 
 //=============================================================================
 
@@ -409,13 +404,15 @@ void FOTA_Setup() {
 }
 
 void FOTA_Loop() {
-  static unsigned long last_check = 0;
+  
   if (WiFi.status() != WL_CONNECTED) return;
-  if ((last_check > 0) &&
-      ((millis() - last_check) < appSettings.firmwareUpdateInterval * 1000))
-    return;
-  last_check = millis();
-  FOTAClient.checkAndUpdateFOTA(true);
+
+  static uint32_t last_check = 0;
+  if (helper_time::TimeReached(last_check)) {
+    helper_time::SetNextTimeInterval(last_check, appSettings.firmwareUpdateInterval * 1000);
+    FOTAClient.checkAndUpdateFOTA(true);
+  }
+
 }
 // =============================== just wifi start =============================
 
@@ -480,7 +477,7 @@ void click1() {
   Serial.println("Button 1 click.");
 #ifdef OLED1306
   screenOn = true;
-  lastTimeScreenOn = millis();
+  screenOnTime = millis();  
   display.displayOn();
 #endif
 }  // click1
@@ -495,7 +492,7 @@ void doubleclick1() {
 // time.
 void longPressStart1() {
   Serial.println("Button 1 longPress start");
-  longPressStart = millis();
+  _longpress_start_time = millis();
 }  // longPressStart1
 
 // This function will be called often, while the button1 is pressed for a long
@@ -508,7 +505,7 @@ void longPress1() {
 // pressed for a long time.
 void longPressStop1() {
   Serial.println("Button 1 longPress stop");
-  if (millis() - longPressStart > 5000) {
+  if (helper_time::TimePassedSince(_longpress_start_time) > 5000) {
     resetESP();
   }
 }  // longPressStop1
@@ -528,7 +525,7 @@ void oneButtonSetup() {
 void initSSD1306() {
   display.init();
   display.flipScreenVertically();
-  display.setContrast(255);
+  display.setContrast(255);  
 }
 
 void _drawWifiQuality(int8_t quality) {
@@ -559,31 +556,32 @@ void _oledUpdateStatusText() {
   display.fillRect(0, 0, 82, 15);
   display.setColor(WHITE);
   display.setTextAlignment(TEXT_ALIGN_LEFT);
-  if (statusString == "") {
+  if (_status_text == "") {
     if (millis()%6000 < 3000) {
-      statusString = WiFi.localIP().toString();
+      _status_text = WiFi.localIP().toString();
     } else {
-      statusString = WiFi.SSID();
+      _status_text = WiFi.SSID();
     }
   }
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 0, statusString);
+  display.drawString(0, 0, _status_text);
 
   //display.drawLine(0, 16, 82, 16);
   static unsigned long last_check = 0;
   if ((last_check > 0) && ((millis() - last_check) < 3000)) return;
   last_check = millis();
-  statusString = "";
+  _status_text = "";
 }
 
 void _oledLoop() {
-  static unsigned long last_check = 0;
-  if ((last_check > 0) && ((millis() - last_check) < 1000)) return;
-  last_check = millis();
-  if (screenOn) {
-    _oledUpdateStatusText();
-    _drawWifiQuality( helper_wifi::wifiGetRssiAsQuality(WiFi.RSSI()) );
-    display.display();
+  static uint32_t check_every_sec = 0;
+  if (helper_time::TimeReached(check_every_sec)) {
+    helper_time::SetNextTimeInterval(check_every_sec, 1000);
+    if (screenOn) {
+      _oledUpdateStatusText();
+      _drawWifiQuality( helper_wifi::wifiGetRssiAsQuality(WiFi.RSSI()) );
+      display.display();
+    }
   }
 }
 
@@ -696,11 +694,11 @@ void mqttCallback(String &topic, String &payload) {
 bool mqttConnect() {
   if (WiFi.status() != WL_CONNECTED) {
     TLOGDEBUGF_P(PSTR("%sNo WiFi connection \n"), MQTT_STR);
-    return (mqttConnected = false);
+    return (_mqtt_connected = false);
   }
   TLOGDEBUGF_P(PSTR("%sConnecting to MQTT... \n"), MQTT_STR);
-  mqttConnected = mqttClient.connected();
-  if (!mqttConnected) {
+  _mqtt_connected = mqttClient.connected();
+  if (!_mqtt_connected) {
     TLOGDEBUGF_P(PSTR("%sConnecting to: \n\t%s\n\tPort: %d\n\tUser: "
                        "%s\n\tpass: %s\n"), MQTT_STR,
                   appSettings.mqttBroker, appSettings.mqttPort,
@@ -716,12 +714,12 @@ bool mqttConnect() {
 #endif
     if (mqttClient.connect(clientId.c_str(), appSettings.mqttUser,
                            appSettings.mqttPass)) {
-      mqttConnections++;
+      _mqtt_connections++;
       TLOGDEBUGF_P(PSTR("%sConnected.\n"), MQTT_STR);
       String topic;
       topic = helper_general::addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicCommand);
       mqttClient.subscribe(topic.c_str());
-      mqttConnected = true;
+      _mqtt_connected = true;
     } else {
       int err = 0;
 #ifdef USE_PUBSUBCLIENT
@@ -734,13 +732,13 @@ bool mqttConnect() {
   } else {
     TLOGDEBUGF_P(PSTR("%sAlready connected.\n"), MQTT_STR);
   }
-  return mqttConnected;
+  return _mqtt_connected;
 }
 
 bool _mqttSendMessage(const char *message) {
   bool result = false;
   if (mqttConnect()) {
-    statusString = "Sending...";
+    _status_text = "Sending...";
     String topic;
     topic = helper_general::addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicStatus);
     LOGDEBUGLN(topic.c_str());
@@ -770,7 +768,7 @@ void _statusReport() {
              appSettings.mqttPort,
              String(appSettings.mqttUser).c_str(),
              "*****",  // String(appSettings.mqttPass).c_str(),
-             mqttConnections,
+             _mqtt_connections,
              volt);
 
   LOGDEBUGF("\n[MQTT BUFFER] %s\n", buffer);
@@ -779,14 +777,16 @@ void _statusReport() {
 }
 
 void _statusReportLoop() {
-  static uint32_t last_status_check = 0;
+  
   if (WiFi.status() != WL_CONNECTED) return;
   if (appSettings.mqttTopicStatusInterval == 0) return;
-  if ((last_status_check > 0) &&
-      ((millis() - last_status_check) < (appSettings.mqttTopicStatusInterval * 1000)))
-    return;
-  last_status_check = millis();
-  _statusReport();
+
+  static uint32_t last_status_check = 0;
+  if (helper_time::TimeReached(last_status_check)) {
+    helper_time::SetNextTimeInterval(last_status_check, appSettings.mqttTopicStatusInterval * 1000);
+    _statusReport();
+  }
+    
 }
 
 void _mqttLoop() {
@@ -794,11 +794,13 @@ void _mqttLoop() {
 
   if (!mqttClient.loop()) {
     static uint32_t last_mqtt_check = 0;
-    if ((last_mqtt_check == 0) || (millis() - last_mqtt_check) > 10000) {
-      last_mqtt_check = millis();
+
+    if (helper_time::TimeReached(last_mqtt_check)) {
+      helper_time::SetNextTimeInterval(last_mqtt_check, 10000);
       TLOGDEBUGF_P(PSTR("%s(mqttloop) Not connected. Reconnecting.\n"), MQTT_STR);
       mqttConnect();
     }
+
   } else {
     _statusReportLoop();
   }
@@ -924,9 +926,10 @@ void appLoop() {
 
 #ifdef MQTT_ENABLED
   // check for messages every second
-  if (millis() - _lastMQTTloop > 1000) {
-    _lastMQTTloop = millis();
-    _mqttLoop();
+  static uint32_t  check_every_sec = 0;
+  if (helper_time::TimeReached(check_every_sec)) {
+    helper_time::SetNextTimeInterval(check_every_sec, 1000);
+    _mqttLoop(); 
   }
 #endif
 }

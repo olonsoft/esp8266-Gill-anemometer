@@ -8,10 +8,10 @@
 
 WindFunc wfGill;
 
-SerialDataResult_t Gill::decodeSerialData(char *data) {
+SerialDataResult Gill::decodeSerialData(char *data) {
   char msg[25];
   // start of text
-  if (*data != STX) return SerialDataResult_t::srNoControlChars;
+  if (*data != STX) return SerialDataResult::NoControlChars;
   ++data;
 
   // actual message
@@ -22,20 +22,20 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
     msg[i++] = *data++;
 
     if (i > 18) {  // 18
-      return SerialDataResult_t::srLongMessageError;
+      return SerialDataResult::LongMessageError;
     }
   }
   msg[i - 1] = '\0';
 
   // end of text
-  if (*data != ETX) return SerialDataResult_t::srNoControlChars;
+  if (*data != ETX) return SerialDataResult::NoControlChars;
   ++data;
 
   // checksum
   char scs = (char)strtol(data, nullptr, 16);
   TLOGDEBUGF_P(PSTR("msg: %s cs: %X crc: %X\n"), msg, cs, scs);
   if (scs != cs)
-    return SerialDataResult_t::srCheckSumError;
+    return SerialDataResult::CheckSumError;
   else {
     const char *delim = ",";
     int token_count = 0;
@@ -79,43 +79,43 @@ SerialDataResult_t Gill::decodeSerialData(char *data) {
                     _speed, unit, error);
 
     if (error > 0) {
-      return SerialDataResult_t::srDeviceError;
+      return SerialDataResult::DeviceError;
     }
-    windSpeedUnit_t receivedUnit;
+    WindSpeedUnit receivedUnit;
     switch (unit) {
       case 'M':
-        receivedUnit = windSpeedUnit_t::wsMetersPerSecond;
+        receivedUnit = WindSpeedUnit::MetersPerSecond;
         break;
       case 'N':
-        receivedUnit = windSpeedUnit_t::wsKnots;
+        receivedUnit = WindSpeedUnit::Knots;
         break;
       case 'P':
-        receivedUnit = windSpeedUnit_t::wsMilesPerHour;
+        receivedUnit = WindSpeedUnit::MilesPerHour;
         break;
       case 'K':
-        receivedUnit = windSpeedUnit_t::wsKmPerHour;
+        receivedUnit = WindSpeedUnit::KmPerHour;
         break;
       case 'F':
-        receivedUnit = windSpeedUnit_t::wsFeetPerMinute;
+        receivedUnit = WindSpeedUnit::FeetPerMinute;
         break;
       default:
-        receivedUnit = windSpeedUnit_t::wsMetersPerSecond;
+        receivedUnit = WindSpeedUnit::MetersPerSecond;
         break;
     }
     _speed = wfGill.convertUnit(_speed, receivedUnit, _windSpeedUnit);
     TLOGDEBUGF_P(PSTR("Converted: %.2f\n"), _speed);
   }
 
-  return SerialDataResult_t::srOK;
+  return SerialDataResult::Ok;
 }
 
-void Gill::setSpeedUnit(windSpeedUnit_t speedUnit) {
+void Gill::setWindSpeedUnit(WindSpeedUnit speedUnit) {
   _windSpeedUnit = speedUnit;
 }
 
-windSpeedUnit_t Gill::getSpeedUnit() { return _windSpeedUnit; }
+WindSpeedUnit Gill::getWindSpeedUnit() { return _windSpeedUnit; }
 
-SerialDataResult_t Gill::getSerialDataResult() { return _serialDataResult; }
+SerialDataResult Gill::getSerialDataResult() { return _serialDataResult; }
 
 float Gill::getSpeed() { return _speed; }
 

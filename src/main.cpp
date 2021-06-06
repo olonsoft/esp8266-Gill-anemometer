@@ -22,21 +22,21 @@ ESPCrashSave crashSave;
 // ===================== Serial ======================
 SoftwareSerial swSer;
 
-char receivedChars[SERIAL_BUFFER_SIZE];  // an array to store the received data
-bool serialNewData = false;
-bool serialEnabled = false;
+char      _received_chars[SERIAL_BUFFER_SIZE];  // an array to store the received data
+bool      _serial_has_new_data = false;
+bool      _is_serial_enabled   = false;
 
 // ===================== wind data ==================
 
-Gill gill;
-WindFunc windF;
+Gill      gill;
+WindFunc  windF;
 
-uint16_t windDirectionCurrent;
-uint16_t windDirectionAverage;
-float windSpeedCurrent;
-float windSpeedAverage;
-float windSpeedMax;
-float windSpeedMin;
+uint16_t  _wind_direction_current;
+uint16_t  _wind_direction_average;
+float     _wind_speed_current;
+float     _wind_speed_average;
+float     _wind_speed_max;
+float     _wind_speed_min;
 
 const char dataWindPayload[] PROGMEM =
     "{\"time\":\"%s\","
@@ -52,19 +52,18 @@ const char dataPayload[] PROGMEM =
     "\"dir\":\"%d\""
     "}";
 
-bool onBoardLedOn = false;
-uint32_t onBoardLedTime = 0;
+bool      _is_chip_led_on     = false;
+uint32_t  _chip_led_on_time   = 0;
 
-bool chipLedOn = false;
-uint32_t chipLedTime = 0;
+// set it true because first call on setup will set it off
+bool      _is_mosfet_on       = true;  
 
-bool mosfetOn =
-    true;  // set it true because first call on setup will set it off
+bool      _is_first_wifi_connection = true;
 
-bool firstWiFiConnection = true;
+uint32_t  _last_check_alive_time = 0;
 
-uint32_t lastHeartBeat = 0;
-Ticker tickerWatchDog;
+Ticker    tickerWatchDog;
+
 void isAlive();
 
 void drawCompass() {
@@ -80,7 +79,7 @@ void drawCompass() {
 
   display.drawCircle(clockCenterX, clockCenterY, clockRadius);
 
-  float angle = (float)windDirectionCurrent;
+  float angle = (float)_wind_direction_current;
   angle = (angle / 57.29577951);  // Convert degrees to radians
   int x1 = (clockCenterX + (sin(angle) * clockRadius));
   int y1 = (clockCenterY - (cos(angle) * clockRadius));
@@ -89,14 +88,14 @@ void drawCompass() {
   int y2 = (clockCenterY - (cos(angle) * (clockRadius - (clockRadius / 2))));
   display.drawLine(x1, y1, x2, y2);
 
-  angle = (float)windDirectionCurrent - 15;
+  angle = (float)_wind_direction_current - 15;
   if (angle < 0) angle = angle + 358;
   angle = (angle / 57.29577951);  // Convert degrees to radians
   x2 = (clockCenterX + (sin(angle) * (clockRadius - (clockRadius / 3))));
   y2 = (clockCenterY - (cos(angle) * (clockRadius - (clockRadius / 3))));
   display.drawLine(x1, y1, x2, y2);
 
-  angle = (float)windDirectionCurrent + 15;
+  angle = (float)_wind_direction_current + 15;
   if (angle > 359) angle = angle - 360;
   angle = (angle / 57.29577951);  // Convert degrees to radians
   x2 = (clockCenterX + (sin(angle) * (clockRadius - (clockRadius / 3))));
@@ -105,29 +104,33 @@ void drawCompass() {
 
   display.setTextAlignment(TEXT_ALIGN_CENTER);
   display.drawString(clockCenterX, clockCenterY - 6,
-                     String(windDirectionCurrent));
+                     String(_wind_direction_current));
 
-  // display tmpWindSpeed, windSpeedMin, windSpeedMax
+  // display tmpWindSpeed, _wind_speed_min, _wind_speed_max
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_16);
-  display.drawString(50, 16, "Spd: " + String(windSpeedCurrent));
-  display.drawString(50, 32, "Min: " + String(windSpeedMin));
-  display.drawString(50, 48, "Max: " + String(windSpeedMax));
+  display.drawString(50, 16, "Spd: " + String(_wind_speed_current));
+  display.drawString(50, 32, "Min: " + String(_wind_speed_min));
+  display.drawString(50, 48, "Max: " + String(_wind_speed_max));
 
   display.display();
 }
 
 // oled screen screen saver and draw compass if on.
 void oledLoop() {
-  static unsigned long last_data_sent = 0;
+  static uint32_t timeToCheck = 0;
   // need to proceed not less than 1000ms
-  if ((last_data_sent > 0) && ((millis() - last_data_sent) < 1000)) return;
-  last_data_sent = millis();
-  if (screenOn && (last_data_sent - lastTimeScreenOn > screenSaverTime * 1000)) {
-    screenOn = false;
-    display.displayOff();
-    statusString = "";
+  if (helper_time::TimeReached(timeToCheck)) {
+    helper_time::SetNextTimeInterval(timeToCheck, 1000);
+
+    if (screenOn && helper_time::TimePassedSince(screenOnTime) > SCREEN_SAVER_TIME) {
+      screenOn = false;
+      display.displayOff();
+      _status_text = "";
+    }
+
   }
+
   if (screenOn /* && windSpeedSamples > 0 */) {
     drawCompass();
   }
@@ -135,16 +138,14 @@ void oledLoop() {
 
 void flashChipLed() {
   digitalWrite(LED_BUILTIN, LED_BUILTIN_ON);
-  chipLedTime = millis();
-  chipLedOn = true;
+  _chip_led_on_time = millis();
+  _is_chip_led_on = true;
 }
 
 void ledsLoop() {
-  uint32_t t = millis();
-
-  if (chipLedOn && t - chipLedTime > 100) {
+  if (_is_chip_led_on && helper_time::TimePassedSince(_chip_led_on_time) > 100) {
     digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
-    chipLedOn = false;
+    _is_chip_led_on = false;
   }
 }
 
@@ -154,20 +155,20 @@ bool serialDataReceived() {
   char _CR = '\r';
   char rc;
 
-  while (swSer.available() > 0 && serialNewData == false) {
+  while (swSer.available() > 0 && _serial_has_new_data == false) {
     rc = swSer.read();
     if (rc != _LF) {
       if (rc != _CR) {
-        receivedChars[ndx++] = rc;
+        _received_chars[ndx++] = rc;
         if (ndx >= SERIAL_BUFFER_SIZE) ndx--;
       }
     } else {
-      receivedChars[ndx] = '\0';  // terminate the string
+      _received_chars[ndx] = '\0';  // terminate the string
       ndx = 0;
-      serialNewData = true;
+      _serial_has_new_data = true;
     }
   }
-  return (serialNewData == true);
+  return (_serial_has_new_data == true);
 }
 
 bool mqttSendDeviceData(char *str) {
@@ -194,21 +195,21 @@ void parseDeviceData(char *str) { mqttSendDeviceData(str); }
 void addDeviceValues(float wSpeed, uint16_t wDir) {
   windF.addWindSpeed(wSpeed);
   windF.addWindDirection(wDir);
-  windF.getWindSpeed(windSpeedCurrent, windSpeedAverage, windSpeedMin,
-                     windSpeedMax);
-  windDirectionCurrent = wDir;
+  windF.getWindSpeed(_wind_speed_current, _wind_speed_average, _wind_speed_min,
+                     _wind_speed_max);
+  _wind_direction_current = wDir;
 }
 
 bool getAndResetWindValues() {
   bool result = false;
   float tmpWindSpeedCurrent;
-  if (windF.getWindSpeed(tmpWindSpeedCurrent, windSpeedAverage, windSpeedMin,
-                         windSpeedMax))
+  if (windF.getWindSpeed(tmpWindSpeedCurrent, _wind_speed_average, _wind_speed_min,
+                         _wind_speed_max))
     result = true;
   if (result) {
     uint16_t tmpWindDirectionCurrent;
     result =
-        windF.getWindDirection(tmpWindDirectionCurrent, windDirectionAverage);
+        windF.getWindDirection(tmpWindDirectionCurrent, _wind_direction_average);
   }
   windF.resetWindSpeed();
   windF.resetWindDirection();
@@ -243,8 +244,8 @@ void mqttSendWindData() {
     // char buffer[strlen_P(payload) + 30];
     char buffer[100] = {};
     snprintf_P(buffer, sizeof(buffer), dataPayload,
-               helper_time::timeToString().c_str(), windSpeedAverage, windSpeedMax,
-               windSpeedMin, windDirectionAverage);
+               helper_time::timeToString().c_str(), _wind_speed_average,
+                _wind_speed_max, _wind_speed_min, _wind_direction_average);
 
     TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
 
@@ -274,38 +275,37 @@ void sendNow() {
 void mainLoop() {
   ledsLoop();
 
-  static unsigned long last_data_sent = 0;
-  if ((last_data_sent > 0) &&
-      ((millis() - last_data_sent) < appSettings.mqttTopicDataInterval * 1000))
-    return;
-  last_data_sent = millis();
-  sendNow();
+  static uint32_t timeToSendData = appSettings.mqttTopicDataInterval * 1000;
+  if (helper_time::TimeReached(timeToSendData)) {
+    helper_time::SetNextTimeInterval(timeToSendData, appSettings.mqttTopicDataInterval * 1000);
+    sendNow();
+  }
+
 }
 
 void isAlive() {
   TLOGDEBUGF_P(PSTR("[WD] Checking alive status...\n"));
    // if there is no heartbeat for 15 minutes, restart ESP
-  if (millis() - lastHeartBeat > 900000) 
-  {
+  if (helper_time::TimePassedSince(_last_check_alive_time) > CHECK_ALIVE_INTERVAL) {
     TLOGDEBUGF_P(PSTR("[WD] No HeartBeat for 15 minutes. Restarting...\n"));
     ESP.restart();
-    delay(1000);
+    delay(1000);    
   }
-  TLOGDEBUGF_P(PSTR("[WD] OK.\n"));
+   TLOGDEBUGF_P(PSTR("[WD] OK.\n"));
 }
 
 void switchMosfet(bool value) {
-  if (mosfetOn != value) {
-    mosfetOn = value;
-    digitalWrite(MOSFET_PIN, (mosfetOn) ? MOSFET_ON : MOSFET_OFF);
+  if (_is_mosfet_on != value) {
+    _is_mosfet_on = value;
+    digitalWrite(MOSFET_PIN, (_is_mosfet_on) ? MOSFET_ON : MOSFET_OFF);
   }
 }
 
-void enableSerial(bool _on) {
-  static bool lastValue = false;
-  if (lastValue != _on) {
-    lastValue = _on;
-    swSer.enableRx(_on);
+void enableSerial(bool value) {
+  static bool is_serial_enabled = false;
+  if (is_serial_enabled != value) {
+    is_serial_enabled = value;
+    swSer.enableRx(value);
   }
 }
 
@@ -326,22 +326,25 @@ void setup() {
   TLOGDEBUGF_P(PSTR("\n\nStarting %s\n"), APP_NAME);
   Serial.setDebugOutput(true);
   
+  // check every 1 minute if we are alive.
+  tickerWatchDog.attach(60, isAlive);  
 
-  tickerWatchDog.attach(60, isAlive);  // check every 1 minute if we are alive.
+
   initialize();
   // app specific functions
 
-  gill.setSpeedUnit(windSpeedUnit_t::wsKnots);
+  gill.setWindSpeedUnit(WindSpeedUnit::Knots);
   swSer.begin(SWSERIAL_BAUD_RATE, SWSERIAL_8N1, PIN_SERIAL_RX, PIN_SERIAL_TX, false,
               SERIAL_BUFFER_SIZE);
   enableSerial(false);
+
 }
 
 void loop() {
   
   // when connected first time with wifi send debug info if exist
-  if (firstWiFiConnection && WiFi.status() == WL_CONNECTED) {
-    firstWiFiConnection = false;
+  if (_is_first_wifi_connection && WiFi.status() == WL_CONNECTED) {
+    _is_first_wifi_connection = false;
     if (crashSave.crashLogFileExists()) {
       crashSave.printCrashLog();
       if (crashSave.sendCrashLogToWeb(CRASH_POST_URL, CRASH_POST_PASSWORD) == 200 
@@ -356,7 +359,6 @@ void loop() {
   button1.tick();
   oledLoop();
   mainLoop();
-  lastHeartBeat = millis();
 
   // switch on mosfet only when mqttClient is connected
   if (mqttClient.connected() && (WiFi.status() == WL_CONNECTED)) {
@@ -370,21 +372,25 @@ void loop() {
   
   if (serialDataReceived()) {
     flashChipLed();
-    SerialDataResult_t sdr = gill.decodeSerialData(receivedChars);
+    SerialDataResult sdr = gill.decodeSerialData(_received_chars);
     switch (sdr) {
-      case SerialDataResult_t::srOK:
+      case SerialDataResult::Ok:
         mqttSendCurrentWindData(gill.getSpeed(), gill.getDirection());
         addDeviceValues(gill.getSpeed(), gill.getDirection());
         break;
-      case SerialDataResult_t::srNoControlChars:  // if there is no control char, it's a message
+      case SerialDataResult::NoControlChars:  // if there is no control char, it's a message
                               // from Gill. Sent it to mqtt status.
-        parseDeviceData(receivedChars);
+        parseDeviceData(_received_chars);
         break;
       default:
         TLOGDEBUGF_P(PSTR("[PARSE] Error %d parsing wind data.\n"), sdr);
         break;
     }
-    serialNewData = false;
+    _serial_has_new_data = false;
     // DEBUG_PRINT_F(PSTR("FreeHeap: %d\n"), ESP.getFreeHeap());
   }
+
+  // All ok. Mark alive.
+  _last_check_alive_time = millis();
+
 }
