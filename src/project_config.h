@@ -5,18 +5,22 @@
 #define APP_AUTHOR                "dimitris19@gmail.com"
 #define APP_WEBSITE               "https://github.com/olonsoft/esp8266-Gill-anemometer"
 
+// note: {id} will be replaced with device's MAC address
+
 // ======= Location where debug log is saved =======
-#define CRASH_POST_URL            "http://fw.crete.ovh/anemometer/gill01/debug.php"
+#define CRASH_POST_URL            "http://fw.crete.ovh/anemometer_{id}/debug.php"
 #define CRASH_POST_PASSWORD       "1919"
 
 // ======= MQTT =======
-#define MQTT_TOPIC                "olonsoft/devices/anemometer/gill01/"
+#define MQTT_TOPIC                "olonsoft/devices/anemometer_{id}/"
 #define MQTT_BROKER               "test.mosquitto.org"
+#define MQTT_PORT                 1883
 #define MQTT_USER                 ""
 #define MQTT_PSW                  ""
+#define MQTT_STR                  "[\e[32mMQTT\e[m] "
 
 // ======= FOTA =======
-#define FIRMWARE_URL              "http://fw.crete.ovh/anemometer/gill01"
+#define FIRMWARE_URL              "http://fw.crete.ovh/anemometer_{id}"
 
 // ======= WIFI =======
 #ifndef DEFAULT_WIFI1_SSID
@@ -29,6 +33,12 @@
 // ======= General options =======
 #define CHECK_ALIVE_INTERVAL      900000          // 90 seconds
 #define SCREEN_SAVER_TIME         120000          // 120 seconds
+#define UPDATE_INTERVAL_DATA      60
+#define UPDATE_INTERVAL_STATUS    600
+#define UPDATE_INTERVAL_CHECK_FW  900
+
+// ======= NTP ===================
+#define NTP_SERVER                "gr.pool.ntp.org"
 
 // ======= Software Serial =======
 #define SWSERIAL_BAUD_RATE        9600

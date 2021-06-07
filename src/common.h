@@ -25,26 +25,27 @@ struct AppSettings {
   uint16_t mqttPort;
   char     mqttUser[20];
   char     mqttPass[63];
-  char     mqttTopic[60];  // I use 3 topics /data /stat /cmd
-  uint16_t mqttTopicDataInterval;
+  char     mqttTopic[60];               // I use 3 topics /data /stat /cmd
+  uint16_t mqttTopicDataInterval;       
   uint16_t mqttTopicStatusInterval;
   char     firmwareUpdateServer[80];
   uint16_t firmwareUpdateInterval;
 };
 
 AppSettings appSettings = {
-    DEFAULT_WIFI1_SSID,                // wifi to connect
-    DEFAULT_WIFI1_PSW,                 // wifi password
-    MQTT_BROKER,                       // mqtt broker
-    1883,                              // mqtt port
-    MQTT_USER,                         // mqtt user
-    MQTT_PSW,                          // mqtt password
-    MQTT_TOPIC,                        // mqtt topic
-    60,                                // data topic update interval
-    600,                               // status topic update interval
-    FIRMWARE_URL,                      // firmware url
-    900};                              // firmware update check interval
+    DEFAULT_WIFI1_SSID,                 // wifi to connect
+    DEFAULT_WIFI1_PSW,                  // wifi password
+    MQTT_BROKER,                        // mqtt broker
+    MQTT_PORT,                          // mqtt port
+    MQTT_USER,                          // mqtt user
+    MQTT_PSW,                           // mqtt password
+    MQTT_TOPIC,                         // mqtt topic
+    UPDATE_INTERVAL_DATA,               // data topic update interval
+    UPDATE_INTERVAL_STATUS,             // status topic update interval
+    FIRMWARE_URL,                       // firmware url
+    UPDATE_INTERVAL_CHECK_FW};          // firmware update check interval
 
+String _crash_post_url = CRASH_POST_URL;
 
 #define SEND_DATA 1
 
@@ -52,7 +53,6 @@ AppSettings appSettings = {
 #define EEPROM_SIZE 4096  // EEPROM size in bytes
 // #define SPI_FLASH_SEC_SIZE      4096
 
-#define MQTT_STR "[\e[32mMQTT\e[m] "
 #define MQTT_ENABLED
 #define USE_PUBSUBCLIENT
 
@@ -123,12 +123,12 @@ uint32_t screenOnTime     = 0;
 
 // ============================== time library ================================
 
-const char *ntpServer = "gr.pool.ntp.org";
+const char *ntpServer = NTP_SERVER;
 // timezones: https://remotemonitoringsystems.ca/time-zone-abbreviations.php
 #define MY_TIMEZONE TZ_Europe_Athens
 
 // const char *TZ_INFO = "EET-2EEST-3,M3.5.0/03:00:00,M10.5.0/04:00:00";  
-                                                     
+
 
 // =========================== onebutton ======================================
 
@@ -136,8 +136,6 @@ OneButton button1(BUTTON1, true);
 uint32_t _longpress_start_time = 0;
 
 //=============================================================================
-
-bool ESP_FSExist = false;
 
 String URLEncode2(const char *msg) {
   const char *hex = "0123456789abcdef";
@@ -186,20 +184,9 @@ bool formatFS() {
   }  
 }
 
-void checkFileSystem() {
-  ESP_FSExist = false;
-  if (!ESP_FS.begin()) {
-    TLOGDEBUGF_P(PSTR("[ESP_FS] File system error. Formatting...\n"));
-    ESP_FSExist = formatFS();
-  } else {
-    TLOGDEBUGF_P(PSTR("[ESP_FS] File system check OK.\n"));
-    ESP_FSExist = true;
-  }
-}
+bool saveConfig() {  
+  if (!helper_general::beginFileSystem()) return false; // ? I had to mount again FS. Is it a bug?
 
-bool saveConfig() {
-  if (!ESP_FSExist) return false;
-  checkFileSystem(); // ? I had to mount again FS. Is it a bug?
   DynamicJsonDocument doc(1024);
 
   doc[F("ssid")] = appSettings.ssid;
@@ -241,7 +228,7 @@ bool saveConfig() {
 
 bool loadConfig() {
   TLOGDEBUGF_P(PSTR("[ESP_FS] Loading config from file [%s].\n"), CONFIGFILE);
-  if (!ESP_FSExist) return false;
+  if (!helper_general::beginFileSystem()) return false;
 
   if (!ESP_FS.exists(String(CONFIGFILE))) {
     TLOGDEBUGF_P(PSTR("Config file does not exist. Creating default. [%s]\n"),
@@ -306,8 +293,9 @@ bool loadConfig() {
 }
 
 bool deleteConfig() {
-  if (!ESP_FSExist) return false;
-  checkFileSystem(); // ? I had to mount again FS. Is it a bug?
+  
+  if (!helper_general::beginFileSystem()) return false; // ? I had to mount again FS. Is it a bug?
+
   if (!ESP_FS.exists(String(CONFIGFILE))) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Config file [%s] does not exist.\n"),
                   CONFIGFILE);
@@ -398,7 +386,10 @@ int saveFlashWiFi(const String& ssid, const String& pass) {
 void onFOTAMessage(fota_t t, char *msg) { TLOGDEBUG(msg); }
 
 void FOTA_Setup() {
-  FOTAClient.setFOTAParameters(helper_general::addTrailingSlash(String(appSettings.firmwareUpdateServer)).c_str(), APP_NAME,
+  String server = helper_general::addMacAddress(String(appSettings.firmwareUpdateServer));
+  server = helper_general::addTrailingSlash(server);
+  FOTAClient.setFOTAParameters(server.c_str(), 
+  APP_NAME,
                                  APP_VERSION, APP_VERSION);
   FOTAClient.onMessage(onFOTAMessage);
 }
@@ -740,7 +731,8 @@ bool _mqttSendMessage(const char *message) {
   if (mqttConnect()) {
     _status_text = "Sending...";
     String topic;
-    topic = helper_general::addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicStatus);
+    topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+    topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicStatus);
     LOGDEBUGLN(topic.c_str());
     result = (mqttClient.publish(topic.c_str(), message) == true);
     mqttClient.loop();
@@ -761,7 +753,8 @@ void _statusReport() {
              (char *)APP_VERSION, WiFi.SSID().c_str(),
              "*****",  // WiFi.psk().c_str(),
              WiFi.BSSIDstr().c_str(), WiFi.RSSI(),
-             helper_time::timeToString().c_str(), helper_time::getUpTimeString().c_str(),
+             helper_time::timeToString().c_str(), 
+             helper_time::getUpTimeString().c_str(),
              ESP.getFreeHeap(),
              String(ESP.getResetReason()).c_str(),
              String(appSettings.mqttBroker).c_str(), 
@@ -808,10 +801,12 @@ void _mqttLoop() {
 
 #endif
 
-void initialize() {
+void initialize() {  
+  _crash_post_url = helper_general::addMacAddress(_crash_post_url);  
+
   // check file system
   TLOGDEBUGF_P(PSTR("[DEBUG] Checking file system.\n"));
-  checkFileSystem();
+  helper_general::beginFileSystem();
   TLOGDEBUGF_P(PSTR("[DEBUG] Print default configuration:\n"));
   debugConfig();
 

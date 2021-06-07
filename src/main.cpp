@@ -38,13 +38,13 @@ float     _wind_speed_average;
 float     _wind_speed_max;
 float     _wind_speed_min;
 
-const char dataWindPayload[] PROGMEM =
+const char _payload_wind_data_instant[] PROGMEM =
     "{\"time\":\"%s\","
     "\"speed\":\"%.2f\","
     "\"dir\":\"%d\""
     "}";
 
-const char dataPayload[] PROGMEM =
+const char _payload_wind_data_average[] PROGMEM =
     "{\"time\":\"%s\","
     "\"speed\":\"%.2f\","
     "\"gust\":\"%.2f\","
@@ -220,7 +220,7 @@ void mqttSendCurrentWindData(float speed, int direction) {
   if (mqttConnect()) {
     // char buffer[strlen_P(payload) + 30];
     char buffer[100] = {};
-    snprintf_P(buffer, sizeof(buffer), dataWindPayload,
+    snprintf_P(buffer, sizeof(buffer), _payload_wind_data_instant,
                helper_time::timeToString().c_str(), speed, direction);
 
     TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
@@ -243,7 +243,7 @@ void mqttSendWindData() {
   if (mqttConnect()) {
     // char buffer[strlen_P(payload) + 30];
     char buffer[100] = {};
-    snprintf_P(buffer, sizeof(buffer), dataPayload,
+    snprintf_P(buffer, sizeof(buffer), _payload_wind_data_average,
                helper_time::timeToString().c_str(), _wind_speed_average,
                 _wind_speed_max, _wind_speed_min, _wind_direction_average);
 
@@ -347,7 +347,7 @@ void loop() {
     _is_first_wifi_connection = false;
     if (crashSave.crashLogFileExists()) {
       crashSave.printCrashLog();
-      if (crashSave.sendCrashLogToWeb(CRASH_POST_URL, CRASH_POST_PASSWORD) == 200 
+      if (crashSave.sendCrashLogToWeb(_crash_post_url, CRASH_POST_PASSWORD) == 200 
           || crashSave.getFSFreeSpace() < 512) {
         crashSave.clearCrashLog();
       }
