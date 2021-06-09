@@ -707,8 +707,9 @@ bool mqttConnect() {
                            appSettings.mqttPass)) {
       _mqtt_connections++;
       TLOGDEBUGF_P(PSTR("%sConnected.\n"), MQTT_STR);
-      String topic;
-      topic = helper_general::addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicCommand);
+      String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+      topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicCommand);
+      TLOGDEBUGF_P(PSTR("%sSubscribing to topic %s\n"), MQTT_STR, topic.c_str());
       mqttClient.subscribe(topic.c_str());
       _mqtt_connected = true;
     } else {
