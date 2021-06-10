@@ -388,9 +388,8 @@ void onFOTAMessage(fota_t t, char *msg) { TLOGDEBUG(msg); }
 void FOTA_Setup() {
   String server = helper_general::addMacAddress(String(appSettings.firmwareUpdateServer));
   server = helper_general::addTrailingSlash(server);
-  FOTAClient.setFOTAParameters(server.c_str(), 
-  APP_NAME,
-                                 APP_VERSION, APP_VERSION);
+  FOTAClient.setFOTAParameters(server.c_str(), APP_NAME, 
+                               APP_VERSION, APP_VERSION);
   FOTAClient.onMessage(onFOTAMessage);
 }
 
@@ -399,8 +398,8 @@ void FOTA_Loop() {
   if (WiFi.status() != WL_CONNECTED) return;
 
   static uint32_t last_check = 0;
-  if (helper_time::TimeReached(last_check)) {
-    helper_time::SetNextTimeInterval(last_check, appSettings.firmwareUpdateInterval * 1000);
+  if (helper_time::timeReached(last_check)) {
+    helper_time::setNextTimeInterval(last_check, appSettings.firmwareUpdateInterval * 1000);
     FOTAClient.checkAndUpdateFOTA(true);
   }
 
@@ -496,7 +495,7 @@ void longPress1() {
 // pressed for a long time.
 void longPressStop1() {
   Serial.println("Button 1 longPress stop");
-  if (helper_time::TimePassedSince(_longpress_start_time) > 5000) {
+  if (helper_time::timePassedSince(_longpress_start_time) > 5000) {
     resetESP();
   }
 }  // longPressStop1
@@ -566,8 +565,8 @@ void _oledUpdateStatusText() {
 
 void _oledLoop() {
   static uint32_t check_every_sec = 0;
-  if (helper_time::TimeReached(check_every_sec)) {
-    helper_time::SetNextTimeInterval(check_every_sec, 1000);
+  if (helper_time::timeReached(check_every_sec)) {
+    helper_time::setNextTimeInterval(check_every_sec, 1000);
     if (screenOn) {
       _oledUpdateStatusText();
       _drawWifiQuality( helper_wifi::wifiGetRssiAsQuality(WiFi.RSSI()) );
@@ -776,8 +775,8 @@ void _statusReportLoop() {
   if (appSettings.mqttTopicStatusInterval == 0) return;
 
   static uint32_t last_status_check = 0;
-  if (helper_time::TimeReached(last_status_check)) {
-    helper_time::SetNextTimeInterval(last_status_check, appSettings.mqttTopicStatusInterval * 1000);
+  if (helper_time::timeReached(last_status_check)) {
+    helper_time::setNextTimeInterval(last_status_check, appSettings.mqttTopicStatusInterval * 1000);
     _statusReport();
   }
     
@@ -789,8 +788,8 @@ void _mqttLoop() {
   if (!mqttClient.loop()) {
     static uint32_t last_mqtt_check = 0;
 
-    if (helper_time::TimeReached(last_mqtt_check)) {
-      helper_time::SetNextTimeInterval(last_mqtt_check, 10000);
+    if (helper_time::timeReached(last_mqtt_check)) {
+      helper_time::setNextTimeInterval(last_mqtt_check, 10000);
       TLOGDEBUGF_P(PSTR("%s(mqttloop) Not connected. Reconnecting.\n"), MQTT_STR);
       mqttConnect();
     }
@@ -923,8 +922,8 @@ void appLoop() {
 #ifdef MQTT_ENABLED
   // check for messages every second
   static uint32_t  check_every_sec = 0;
-  if (helper_time::TimeReached(check_every_sec)) {
-    helper_time::SetNextTimeInterval(check_every_sec, 1000);
+  if (helper_time::timeReached(check_every_sec)) {
+    helper_time::setNextTimeInterval(check_every_sec, 1000);
     _mqttLoop(); 
   }
 #endif

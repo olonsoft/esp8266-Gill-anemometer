@@ -1,7 +1,7 @@
 #pragma once
 
 #define APP_NAME                  "Anemometer"
-#define APP_VERSION               "1.1.9"  // Updated 2021-06-04
+#define APP_VERSION               "1.1.9"  // Updated 2021-06-10
 #define APP_AUTHOR                "dimitris19@gmail.com"
 #define APP_WEBSITE               "https://github.com/olonsoft/esp8266-Gill-anemometer"
 

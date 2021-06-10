@@ -120,10 +120,10 @@ void drawCompass() {
 void oledLoop() {
   static uint32_t timeToCheck = 0;
   // need to proceed not less than 1000ms
-  if (helper_time::TimeReached(timeToCheck)) {
-    helper_time::SetNextTimeInterval(timeToCheck, 1000);
+  if (helper_time::timeReached(timeToCheck)) {
+    helper_time::setNextTimeInterval(timeToCheck, 1000);
 
-    if (screenOn && helper_time::TimePassedSince(screenOnTime) > SCREEN_SAVER_TIME) {
+    if (screenOn && helper_time::timePassedSince(screenOnTime) > SCREEN_SAVER_TIME) {
       screenOn = false;
       display.displayOff();
       _status_text = "";
@@ -143,7 +143,7 @@ void flashChipLed() {
 }
 
 void ledsLoop() {
-  if (_is_chip_led_on && helper_time::TimePassedSince(_chip_led_on_time) > 100) {
+  if (_is_chip_led_on && helper_time::timePassedSince(_chip_led_on_time) > 100) {
     digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
     _is_chip_led_on = false;
   }
@@ -276,8 +276,8 @@ void mainLoop() {
   ledsLoop();
 
   static uint32_t timeToSendData = appSettings.mqttTopicDataInterval * 1000;
-  if (helper_time::TimeReached(timeToSendData)) {
-    helper_time::SetNextTimeInterval(timeToSendData, appSettings.mqttTopicDataInterval * 1000);
+  if (helper_time::timeReached(timeToSendData)) {
+    helper_time::setNextTimeInterval(timeToSendData, appSettings.mqttTopicDataInterval * 1000);
     sendNow();
   }
 
@@ -286,7 +286,7 @@ void mainLoop() {
 void isAlive() {
   TLOGDEBUGF_P(PSTR("[WD] Checking alive status...\n"));
    // if there is no heartbeat for 15 minutes, restart ESP
-  if (helper_time::TimePassedSince(_last_check_alive_time) > CHECK_ALIVE_INTERVAL) {
+  if (helper_time::timePassedSince(_last_check_alive_time) > CHECK_ALIVE_INTERVAL) {
     TLOGDEBUGF_P(PSTR("[WD] No HeartBeat for 15 minutes. Restarting...\n"));
     ESP.restart();
     delay(1000);    
