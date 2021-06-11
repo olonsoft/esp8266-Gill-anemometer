@@ -729,9 +729,8 @@ bool mqttConnect() {
 bool _mqttSendMessage(const char *message) {
   bool result = false;
   if (mqttConnect()) {
-    _status_text = "Sending...";
-    String topic;
-    topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+    _status_text = "Sending...";    
+    String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
     topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicStatus);
     LOGDEBUGLN(topic.c_str());
     result = (mqttClient.publish(topic.c_str(), message) == true);

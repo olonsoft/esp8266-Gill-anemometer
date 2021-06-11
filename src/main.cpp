@@ -175,8 +175,8 @@ bool mqttSendDeviceData(char *str) {
   if (mqttConnect()) {
     LOGDEBUG(str);
 
-    String topic;
-    topic = String(appSettings.mqttTopic) + FPSTR(_topicStatus);
+    String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+    topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicStatus);
 
     if (mqttClient.publish(topic.c_str(), str) == true) {
       mqttClient.loop();
@@ -225,8 +225,8 @@ void mqttSendCurrentWindData(float speed, int direction) {
 
     TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
 
-    String topic;
-    topic = String(appSettings.mqttTopic) + FPSTR(_topicWind);
+    String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+    topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicWind);
     TLOGDEBUGF_P(PSTR("[MQTT TOPIC] %s\n"), topic.c_str());
 
     if (mqttClient.publish(topic.c_str(), buffer) == true) {
@@ -249,8 +249,8 @@ void mqttSendWindData() {
 
     TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
 
-    String topic;
-    topic = String(appSettings.mqttTopic) + FPSTR(_topicData);
+    String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+    topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicData);
     TLOGDEBUGF_P(PSTR("[MQTT TOPIC] %s\n"), topic.c_str());
     
     if (mqttClient.publish(topic.c_str(), buffer) == true) {
