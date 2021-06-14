@@ -81,10 +81,12 @@ SerialDataResult Gill::decodeSerialData(char *data) {
     if (error > 0) {
       return SerialDataResult::DeviceError;
     }
+
     WindSpeedUnit receivedUnit;
+
     switch (unit) {
       case 'M':
-        receivedUnit = WindSpeedUnit::MetersPerSecond;
+        receivedUnit = WindSpeedUnit::MetresPerSecond;
         break;
       case 'N':
         receivedUnit = WindSpeedUnit::Knots;
@@ -99,9 +101,10 @@ SerialDataResult Gill::decodeSerialData(char *data) {
         receivedUnit = WindSpeedUnit::FeetPerMinute;
         break;
       default:
-        receivedUnit = WindSpeedUnit::MetersPerSecond;
+        receivedUnit = WindSpeedUnit::MetresPerSecond;
         break;
     }
+    
     _speed = wfGill.convertUnit(_speed, receivedUnit, _windSpeedUnit);
     TLOGDEBUGF_P(PSTR("Converted: %.2f\n"), _speed);
   }

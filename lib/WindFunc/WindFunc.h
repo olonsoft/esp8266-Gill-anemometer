@@ -7,7 +7,7 @@
 
 enum class WindSpeedUnit
 {
-  MetersPerSecond,
+  MetresPerSecond,
   Knots,
   MilesPerHour,
   KmPerHour,

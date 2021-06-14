@@ -6,9 +6,12 @@ float WindFunc::convertUnit(float speed, WindSpeedUnit fromUnit,
                             WindSpeedUnit toUnit) {
   float tmpKmPerHour = 0.0f;
   float result = speed;
+
   if (fromUnit != toUnit) {
+
+    // convert to Km/h
     switch (fromUnit) {
-      case WindSpeedUnit::MetersPerSecond:
+      case WindSpeedUnit::MetresPerSecond:
         tmpKmPerHour = 3.6f * speed;
         break;
       case WindSpeedUnit::Knots:
@@ -26,8 +29,10 @@ float WindFunc::convertUnit(float speed, WindSpeedUnit fromUnit,
       default:
         break;
     }
+
+    // convert Km/h back to wanted unit
     switch (toUnit) {
-      case WindSpeedUnit::MetersPerSecond:
+      case WindSpeedUnit::MetresPerSecond:
         result = tmpKmPerHour * 0.2777f;
         break;
       case WindSpeedUnit::Knots:
@@ -45,7 +50,9 @@ float WindFunc::convertUnit(float speed, WindSpeedUnit fromUnit,
       default:
         break;
     }
+
   }
+
   return result;
 }
 

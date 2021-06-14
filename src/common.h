@@ -763,7 +763,7 @@ void _statusReport() {
              _mqtt_connections,
              volt);
 
-  LOGDEBUGF("\n[MQTT BUFFER] %s\n", buffer);
+  LOGDEBUGF("\n%sBuffer: %s\n", MQTT_STR,  buffer);
 
   _mqttSendMessage(buffer);
 }

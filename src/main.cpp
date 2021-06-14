@@ -181,10 +181,10 @@ bool mqttSendDeviceData(char *str) {
     if (mqttClient.publish(topic.c_str(), str) == true) {
       mqttClient.loop();
       flashChipLed();      
-      TLOGDEBUGF_P(PSTR("[MQTT] Success sending message.\n"));
+      TLOGDEBUGF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
       return true;
     } else {
-      TLOGDEBUGF_P(PSTR("[MQTT] Error sending message.\n"));
+      TLOGDEBUGF_P(PSTR("%sError sending message.\n"), MQTT_STR);
     }
   }
   return false;
@@ -223,18 +223,18 @@ void mqttSendCurrentWindData(float speed, int direction) {
     snprintf_P(buffer, sizeof(buffer), _payload_wind_data_instant,
                helper_time::timeToString().c_str(), speed, direction);
 
-    TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
+    TLOGDEBUGF_P(PSTR("%sBuffer: %s\n"), MQTT_STR, buffer);
 
     String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
     topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicWind);
-    TLOGDEBUGF_P(PSTR("[MQTT TOPIC] %s\n"), topic.c_str());
+    TLOGDEBUGF_P(PSTR("%sTopic: %s\n"), MQTT_STR, topic.c_str());
 
     if (mqttClient.publish(topic.c_str(), buffer) == true) {
       mqttClient.loop();
       flashChipLed();      
-      TLOGDEBUGF_P(PSTR("[MQTT] Success sending message.\n"));
+      TLOGDEBUGF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
     } else {
-      TLOGDEBUGF_P(PSTR("[MQTT] Error sending message.\n"));
+      TLOGDEBUGF_P(PSTR("%sError sending message.\n"), MQTT_STR);
     }
   }
 }
@@ -247,18 +247,18 @@ void mqttSendWindData() {
                helper_time::timeToString().c_str(), _wind_speed_average,
                 _wind_speed_max, _wind_speed_min, _wind_direction_average);
 
-    TLOGDEBUGF_P(PSTR("[MQTT BUFFER] %s\n"), buffer);
+    TLOGDEBUGF_P(PSTR("%sBuffer: %s\n"), MQTT_STR, buffer);
 
     String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
     topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicData);
-    TLOGDEBUGF_P(PSTR("[MQTT TOPIC] %s\n"), topic.c_str());
+    TLOGDEBUGF_P(PSTR("%sTopic: %s\n"), MQTT_STR, topic.c_str());
     
     if (mqttClient.publish(topic.c_str(), buffer) == true) {
       mqttClient.loop();
       flashChipLed();      
-      TLOGDEBUGF_P(PSTR("[MQTT] Success sending message.\n"));
+      TLOGDEBUGF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
     } else {
-      TLOGDEBUGF_P(PSTR("[MQTT] Error sending message.\n"));
+      TLOGDEBUGF_P(PSTR("%sError sending message.\n"), MQTT_STR);
     }
   }
 }
@@ -329,11 +329,11 @@ void setup() {
   // check every 1 minute if we are alive.
   tickerWatchDog.attach(60, isAlive);  
 
-
   initialize();
   // app specific functions
 
   gill.setWindSpeedUnit(WindSpeedUnit::Knots);
+
   swSer.begin(SWSERIAL_BAUD_RATE, SWSERIAL_8N1, PIN_SERIAL_RX, PIN_SERIAL_TX, false,
               SERIAL_BUFFER_SIZE);
   enableSerial(false);
