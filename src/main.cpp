@@ -22,7 +22,7 @@ ESPCrashSave crashSave;
 // ===================== Serial ======================
 SoftwareSerial swSer;
 
-char      _received_chars[SERIAL_BUFFER_SIZE];  // an array to store the received data
+char      _serial_data[SERIAL_BUFFER_SIZE];  // an array to store the received data
 bool      _serial_has_new_data = false;
 bool      _is_serial_enabled   = false;
 
@@ -131,7 +131,7 @@ void oledLoop() {
 
   }
 
-  if (screenOn /* && windSpeedSamples > 0 */) {
+  if (screenOn) {
     drawCompass();
   }
 }
@@ -151,19 +151,21 @@ void ledsLoop() {
 
 bool serialDataReceived() {
   static uint16_t ndx = 0;
-  char _LF = '\n';  // <LF> (should I check <CR>\r instead ?)
-  char _CR = '\r';
+  // device sends <CR><LF> or <CR> depending on setting Lx
+  // common is <CR> so I check for <CR> as ending char
+  char LF = '\n';  
+  char CR = '\r';
   char rc;
 
-  while (swSer.available() > 0 && _serial_has_new_data == false) {
+  while (swSer.available() && !_serial_has_new_data) {
     rc = swSer.read();
-    if (rc != _LF) {
-      if (rc != _CR) {
-        _received_chars[ndx++] = rc;
+    if (rc != CR) {
+      if (rc != LF) {
+        _serial_data[ndx++] = rc;
         if (ndx >= SERIAL_BUFFER_SIZE) ndx--;
       }
     } else {
-      _received_chars[ndx] = '\0';  // terminate the string
+      _serial_data[ndx] = '\0';  // terminate the string
       ndx = 0;
       _serial_has_new_data = true;
     }
@@ -372,7 +374,7 @@ void loop() {
   
   if (serialDataReceived()) {
     flashChipLed();
-    SerialDataResult sdr = gill.decodeSerialData(_received_chars);
+    SerialDataResult sdr = gill.decodeSerialData(_serial_data);
     switch (sdr) {
       case SerialDataResult::Ok:
         mqttSendCurrentWindData(gill.getSpeed(), gill.getDirection());
@@ -380,7 +382,7 @@ void loop() {
         break;
       case SerialDataResult::NoControlChars:  // if there is no control char, it's a message
                               // from Gill. Sent it to mqtt status.
-        parseDeviceData(_received_chars);
+        parseDeviceData(_serial_data);
         break;
       default:
         TLOGDEBUGF_P(PSTR("[PARSE] Error %d parsing wind data.\n"), sdr);
