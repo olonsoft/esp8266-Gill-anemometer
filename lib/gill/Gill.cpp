@@ -2,8 +2,8 @@
 #include <arduino.h>
 #include <helper_general.h>
 
-#define STX '\x02'
-#define ETX '\x03'
+#define STX '\x02'    // start transmition
+#define ETX '\x03'    // end transmition
 #define MAX_TOKENS 5
 
 WindFunc wfGill;
@@ -104,7 +104,7 @@ SerialDataResult Gill::decodeSerialData(char *data) {
         receivedUnit = WindSpeedUnit::MetresPerSecond;
         break;
     }
-    
+
     _speed = wfGill.convertUnit(_speed, receivedUnit, _windSpeedUnit);
     TLOGDEBUGF_P(PSTR("Converted: %.2f\n"), _speed);
   }

@@ -1,0 +1,21 @@
+GPIO14 D5 <- input
+GPIO12 D6 -> output
+GPIO5  D1 SCL
+GPIO4  D2 SDA
+GPIO0  D3 button
+GPIO13 D7 mosfet on/off
+
+Gill anemometer data :
+
+Q,328,013.35,N,00,10
+
+http://studio19.gr/esp8266/anemometer/firmware/
+
+
+[MQTT] connecting to:
+        m23.cloudmqtt.com
+        Port: 11622
+        User: faxvnnmm
+        pass: btsE37NN3FLF
+[MQTT] Connected.
+

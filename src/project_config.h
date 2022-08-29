@@ -1,7 +1,7 @@
 #pragma once
 
 #define APP_NAME                  "Anemometer"
-#define APP_VERSION               "1.2.0"  // Updated 2021-06-10
+#define APP_VERSION               "1.2.1"  // Updated 2022-08-24
 #define APP_AUTHOR                "dimitris19@gmail.com"
 #define APP_WEBSITE               "https://github.com/olonsoft/esp8266-Gill-anemometer"
 
@@ -27,7 +27,7 @@
 #define DEFAULT_WIFI1_SSID        "wifiSSID1"          // Enter your Wifi network SSID
 #endif
 #ifndef DEFAULT_WIFI1_PSW
-#define DEFAULT_WIFI1_PSW         "wifiPASS1"          // Enter your Wifi network 
+#define DEFAULT_WIFI1_PSW         "wifiPASS1"          // Enter your Wifi network
 #endif
 
 // ======= General options =======
@@ -65,5 +65,5 @@
 #define PIN_SERIAL_TX             D6    // gpio12
 
 // oled i2c SCL pin               D1    // gpio5
-// oled i2c SDA pin               D2    // gpio4 
+// oled i2c SDA pin               D2    // gpio4
 #define BUTTON1                   D3    // gpio0

@@ -1,11 +1,11 @@
 /*
-   ___  _             ____         __ _   
-  / _ \| | ___  _ __ / ___|  ___  / _| |_ 
+   ___  _             ____         __ _
+  / _ \| | ___  _ __ / ___|  ___  / _| |_
  | | | | |/ _ \| '_ \\___ \ / _ \| |_| __|
- | |_| | | (_) | | | |___) | (_) |  _| |_ 
+ | |_| | | (_) | | | |___) | (_) |  _| |_
   \___/|_|\___/|_| |_|____/ \___/|_|  \__|
 
-*/         
+*/
 
 #include <Arduino.h>
 #include <project_config.h>
@@ -56,7 +56,7 @@ bool      _is_chip_led_on     = false;
 uint32_t  _chip_led_on_time   = 0;
 
 // set it true because first call on setup will set it off
-bool      _is_mosfet_on       = true;  
+bool      _is_mosfet_on       = true;
 
 bool      _is_first_wifi_connection = true;
 
@@ -113,7 +113,7 @@ void drawCompass() {
   display.drawString(50, 32, "Min: " + String(_wind_speed_min));
   display.drawString(50, 48, "Max: " + String(_wind_speed_max));
 
-  display.display();
+
 }
 
 // oled screen screen saver and draw compass if on.
@@ -129,11 +129,15 @@ void oledLoop() {
       _status_text = "";
     }
 
+    if (screenOn) {
+      _oledUpdateStatusText();
+      _drawWifiQuality( helper_wifi::wifiGetRssiAsQuality(WiFi.RSSI()) );
+      drawCompass();
+      display.display();
+    }
   }
 
-  if (screenOn) {
-    drawCompass();
-  }
+
 }
 
 void flashChipLed() {
@@ -153,7 +157,7 @@ bool serialDataReceived() {
   static uint16_t ndx = 0;
   // device sends <CR><LF> or <CR> depending on setting Lx
   // common is <CR> so I check for <CR> as ending char
-  char LF = '\n';  
+  char LF = '\n';
   char CR = '\r';
   char rc;
 
@@ -181,8 +185,7 @@ bool mqttSendDeviceData(char *str) {
     topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicStatus);
 
     if (mqttClient.publish(topic.c_str(), str) == true) {
-      mqttClient.loop();
-      flashChipLed();      
+      //flashChipLed();
       TLOGDEBUGF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
       return true;
     } else {
@@ -232,8 +235,6 @@ void mqttSendCurrentWindData(float speed, int direction) {
     TLOGDEBUGF_P(PSTR("%sTopic: %s\n"), MQTT_STR, topic.c_str());
 
     if (mqttClient.publish(topic.c_str(), buffer) == true) {
-      mqttClient.loop();
-      flashChipLed();      
       TLOGDEBUGF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
     } else {
       TLOGDEBUGF_P(PSTR("%sError sending message.\n"), MQTT_STR);
@@ -254,10 +255,9 @@ void mqttSendWindData() {
     String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
     topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicData);
     TLOGDEBUGF_P(PSTR("%sTopic: %s\n"), MQTT_STR, topic.c_str());
-    
+
     if (mqttClient.publish(topic.c_str(), buffer) == true) {
-      mqttClient.loop();
-      flashChipLed();      
+      //flashChipLed();
       TLOGDEBUGF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
     } else {
       TLOGDEBUGF_P(PSTR("%sError sending message.\n"), MQTT_STR);
@@ -274,26 +274,16 @@ void sendNow() {
   }
 }
 
-void mainLoop() {
-  ledsLoop();
-
-  static uint32_t timeToSendData = appSettings.mqttTopicDataInterval * 1000;
-  if (helper_time::timeReached(timeToSendData)) {
-    helper_time::setNextTimeInterval(timeToSendData, appSettings.mqttTopicDataInterval * 1000);
-    sendNow();
-  }
-
-}
-
 void isAlive() {
-  TLOGDEBUGF_P(PSTR("[WD] Checking alive status...\n"));
+  TLOGDEBUGF_P(PSTR("[WD] Checking alive status... "));
    // if there is no heartbeat for 15 minutes, restart ESP
   if (helper_time::timePassedSince(_last_check_alive_time) > CHECK_ALIVE_INTERVAL) {
-    TLOGDEBUGF_P(PSTR("[WD] No HeartBeat for 15 minutes. Restarting...\n"));
+    TLOGDEBUGF_P(PSTR("\n[WD] No HeartBeat for 15 minutes. Restarting...\n"));
     ESP.restart();
-    delay(1000);    
+    delay(1000);
+    return;
   }
-   TLOGDEBUGF_P(PSTR("[WD] OK.\n"));
+  TLOGDEBUGF_P(PSTR("OK.\n"));
 }
 
 void switchMosfet(bool value) {
@@ -327,9 +317,9 @@ void setup() {
   Serial.begin(115200);
   TLOGDEBUGF_P(PSTR("\n\nStarting %s\n"), APP_NAME);
   Serial.setDebugOutput(true);
-  
+
   // check every 1 minute if we are alive.
-  tickerWatchDog.attach(60, isAlive);  
+  tickerWatchDog.attach(60, isAlive);
 
   initialize();
   // app specific functions
@@ -343,24 +333,18 @@ void setup() {
 }
 
 void loop() {
-  
+
   // when connected first time with wifi send debug info if exist
   if (_is_first_wifi_connection && WiFi.status() == WL_CONNECTED) {
     _is_first_wifi_connection = false;
     if (crashSave.crashLogFileExists()) {
       crashSave.printCrashLog();
-      if (crashSave.sendCrashLogToWeb(_crash_post_url, CRASH_POST_PASSWORD) == 200 
+      if (crashSave.sendCrashLogToWeb(_crash_post_url, CRASH_POST_PASSWORD) == 200
           || crashSave.getFSFreeSpace() < 512) {
         crashSave.clearCrashLog();
       }
     }
   }
-
-  wifiLoop();
-  appLoop();
-  button1.tick();
-  oledLoop();
-  mainLoop();
 
   // switch on mosfet only when mqttClient is connected
   if (mqttClient.connected() && (WiFi.status() == WL_CONNECTED)) {
@@ -371,7 +355,14 @@ void loop() {
     switchMosfet(MOSFET_OFF);
     enableSerial(false);
   }
-  
+
+  wifiLoop();
+  #ifdef OLED1306
+  oledLoop();
+  #endif
+  mqttLoop();
+  button1.tick();
+
   if (serialDataReceived()) {
     flashChipLed();
     SerialDataResult sdr = gill.decodeSerialData(_serial_data);
@@ -390,6 +381,14 @@ void loop() {
     }
     _serial_has_new_data = false;
     // DEBUG_PRINT_F(PSTR("FreeHeap: %d\n"), ESP.getFreeHeap());
+  }
+
+  ledsLoop();
+
+  static uint32_t timeToSendData = appSettings.mqttTopicDataInterval * 1000;
+  if (helper_time::timeReached(timeToSendData)) {
+    helper_time::setNextTimeInterval(timeToSendData, appSettings.mqttTopicDataInterval * 1000);
+    sendNow();
   }
 
   // All ok. Mark alive.
