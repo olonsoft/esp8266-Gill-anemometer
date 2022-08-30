@@ -302,6 +302,18 @@ void enableSerial(bool value) {
 }
 
 void setup() {
+  Serial.begin(115200);
+  TLOGDEBUGF_P(PSTR("\n\nStarting %s\n"), APP_NAME);
+  Serial.setDebugOutput(true);
+
+  // wifi connection/reconnection will be managed by jw
+  WiFi.persistent(false);
+  WiFi.disconnect(true);
+  ESP.eraseConfig();
+  WiFi.setAutoConnect(false);
+  WiFi.setAutoReconnect(false);
+  delay(10);
+
   // start with mosfet output switched off
   pinMode(MOSFET_PIN, OUTPUT);
   switchMosfet(MOSFET_OFF);
@@ -313,10 +325,6 @@ void setup() {
 
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LED_BUILTIN_OFF);
-
-  Serial.begin(115200);
-  TLOGDEBUGF_P(PSTR("\n\nStarting %s\n"), APP_NAME);
-  Serial.setDebugOutput(true);
 
   // check every 1 minute if we are alive.
   tickerWatchDog.attach(60, isAlive);

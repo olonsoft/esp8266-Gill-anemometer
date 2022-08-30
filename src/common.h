@@ -408,14 +408,13 @@ void FOTA_Loop() {
 // =============================== just wifi start =============================
 
 void jwSetup() {
-  jw.setHostname(
-      APP_NAME);  // Set WIFI hostname (otherwise it would be ESP_XXXXXX)
+  jw.setHostname(APP_NAME);  // Set WIFI hostname (otherwise it would be ESP_XXXXXX)
 
   // Callbacks
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
   // AP mode only as fallback
-  jw.enableAP(false);
+  //jw.enableAP(false);
   jw.enableAPFallback(false);
 
   // Enable STA mode (connecting to a router)
@@ -430,7 +429,7 @@ void jwSetup() {
   WiFi.printDiag(Serial);
 
   // Add internal esp8266 saved wifi network
-  jw.addCurrentNetwork(true);
+  //jw.addCurrentNetwork(true);
   // Add wifi network saved in settings
   jw.addNetwork(appSettings.ssid, appSettings.password);
   // add additional wifi networks
@@ -878,11 +877,7 @@ void startWiFiManager() {
                                 //portal gets turned off
 
   // it starts an access point with the specified name
-  // here  "AutoConnectAP"
   // and goes into a blocking loop awaiting configuration
-
-  // WITHOUT THIS THE AP DOES NOT SEEM TO WORK PROPERLY WITH SDK 1.5 , update to
-  // at least 1.5.1 WiFi.mode(WIFI_STA);
 
   if (!wifiManager.startConfigPortal((char *)APP_NAME)) {
     TLOGDEBUGF_P("failed to connect and hit timeout\n");
