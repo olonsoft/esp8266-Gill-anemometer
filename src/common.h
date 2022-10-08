@@ -29,7 +29,7 @@ struct AppSettings {
   uint16_t mqttTopicDataInterval;
   uint16_t mqttTopicStatusInterval;
   char     firmwareUpdateServer[80];
-  uint16_t firmwareUpdateInterval;
+  uint16_t firmwareUpdateCheckInterval;
 };
 
 AppSettings appSettings = {
@@ -170,7 +170,7 @@ void debugConfig() {
       appSettings.mqttPort, appSettings.mqttUser, appSettings.mqttPass,
       appSettings.mqttTopic, appSettings.mqttTopicDataInterval,
       appSettings.mqttTopicStatusInterval, appSettings.firmwareUpdateServer,
-      appSettings.firmwareUpdateInterval);
+      appSettings.firmwareUpdateCheckInterval);
 }
 
 // ================================== ESP_FS ==================================
@@ -201,7 +201,7 @@ bool saveConfig() {
   doc[F("mdin")] = appSettings.mqttTopicDataInterval;
   doc[F("msin")] = appSettings.mqttTopicStatusInterval;
   doc[F("usrv")] = appSettings.firmwareUpdateServer;
-  doc[F("uint")] = appSettings.firmwareUpdateInterval;
+  doc[F("uint")] = appSettings.firmwareUpdateCheckInterval;
 
   serializeJsonPretty(doc, Serial);
 
@@ -288,8 +288,8 @@ bool loadConfig() {
   strlcpy(appSettings.firmwareUpdateServer,
           doc[F("usrv")] | appSettings.firmwareUpdateServer,
           sizeof(appSettings.firmwareUpdateServer));
-  appSettings.firmwareUpdateInterval =
-      doc[F("uint")] | appSettings.firmwareUpdateInterval;
+  appSettings.firmwareUpdateCheckInterval =
+      doc[F("uint")] | appSettings.firmwareUpdateCheckInterval;
   debugConfig();
   return true;
 }
@@ -400,7 +400,7 @@ void FOTA_Loop() {
 
   static uint32_t last_check = 0;
   if (helper_time::timeReached(last_check)) {
-    helper_time::setNextTimeInterval(last_check, appSettings.firmwareUpdateInterval * 1000);
+    helper_time::setNextTimeInterval(last_check, appSettings.firmwareUpdateCheckInterval * 1000);
     FOTAClient.checkAndUpdateFOTA(true);
   }
 

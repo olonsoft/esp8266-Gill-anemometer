@@ -40,16 +40,16 @@ float     _wind_speed_min;
 
 const char _payload_wind_data_instant[] PROGMEM =
     "{\"time\":\"%s\","
-    "\"speed\":\"%.2f\","
-    "\"dir\":\"%d\""
+    "\"speed\":%.2f,"
+    "\"dir\":%d"
     "}";
 
 const char _payload_wind_data_average[] PROGMEM =
     "{\"time\":\"%s\","
-    "\"speed\":\"%.2f\","
-    "\"gust\":\"%.2f\","
-    "\"lull\":\"%.2f\","
-    "\"dir\":\"%d\""
+    "\"speed\":%.2f,"
+    "\"gust\":%.2f,"
+    "\"lull\":%.2f,"
+    "\"dir\":%d"
     "}";
 
 bool      _is_chip_led_on     = false;

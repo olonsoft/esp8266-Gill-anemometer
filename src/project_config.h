@@ -1,13 +1,13 @@
 #pragma once
 
 #define APP_NAME                  "Anemometer"
-#define APP_VERSION               "1.2.1"  // Updated 2022-08-24
+#define APP_VERSION               "1.2.2"  // Updated 2022-10-08
 #define APP_AUTHOR                "dimitris19@gmail.com"
 #define APP_WEBSITE               "https://github.com/olonsoft/esp8266-Gill-anemometer"
 
 // note: {id} will be replaced with device's MAC address
 
-// ======= Location where debug log is saved =======
+// ======= Location where debug log is uploaded =======
 #define CRASH_POST_URL            "http://fw.crete.ovh/anemometer_{id}/debug.php"
 #define CRASH_POST_PASSWORD       "1919"
 
