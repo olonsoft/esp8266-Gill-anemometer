@@ -20,7 +20,7 @@
 ESPCrashSave crashSave;
 
 // ===================== Serial ======================
-SoftwareSerial swSer;
+EspSoftwareSerial::UART swSer;
 
 char      _serial_data[SERIAL_BUFFER_SIZE];  // an array to store the received data
 bool      _serial_has_new_data = false;
@@ -334,7 +334,7 @@ void setup() {
 
   gill.setWindSpeedUnit(WindSpeedUnit::Knots);
 
-  swSer.begin(SWSERIAL_BAUD_RATE, SWSERIAL_8N1, PIN_SERIAL_RX, PIN_SERIAL_TX, false,
+  swSer.begin(SWSERIAL_BAUD_RATE, EspSoftwareSerial::SWSERIAL_8N1, PIN_SERIAL_RX, PIN_SERIAL_TX, false,
               SERIAL_BUFFER_SIZE);
   enableSerial(false);
 

@@ -7,13 +7,13 @@ You can control how ofter the data will be sent to mqtt broker.
 
 ### The pinout of ESP8266 is:  
 |GPIO PIN|Connection|
-|--------|----|
-|GPIO14 D5| <- TTL input (from rs232)
-|GPIO12 D6 |-> TTL output (to RS232)
-|GPIO5  D1 |SCL
-|GPIO4  D2 |SDA
-|GPIO0  D3 |button
-|GPIO13 D7 |mosfet on/off (there is a mosfet acting as a switch to turn on/off anemometer instrument)
+|---|---|
+|GPIO14 D5|<- TTL input (from rs232)
+|GPIO12 D6|-> TTL output (to RS232)
+|GPIO5  D1|SCL
+|GPIO4  D2|SDA
+|GPIO0  D3|button
+|GPIO13 D7|mosfet on/off (there is a mosfet acting as a switch to turn on/off anemometer instrument)
 
 The commands you can send to ESP8266 topic `devicename/cmd` are:  
 
