@@ -139,6 +139,11 @@ uint32_t _longpress_start_time = 0;
 
 //=============================================================================
 
+void _statusReport();  // used later
+bool _mqttSendMessage(const char *message);
+
+//=============================================================================
+
 String URLEncode2(const char *msg) {
   const char *hex = "0123456789abcdef";
   String encodedMsg = "";
@@ -384,7 +389,10 @@ int saveFlashWiFi(const String& ssid, const String& pass) {
 */
 
 // FOTA section
-void onFOTAMessage(fota_t t, char *msg) { TLOGDEBUG(msg); }
+void onFOTAMessage(fota_t t, char *msg) {
+  _mqttSendMessage(msg);
+  TLOGDEBUG(msg);
+}
 
 void FOTA_Setup() {
   String server = helper_general::addMacAddress(String(appSettings.firmwareUpdateServer));
@@ -569,8 +577,6 @@ void _oledUpdateStatusText() {
 
 #ifdef MQTT_ENABLED
 
-void _statusReport();  // used later
-bool _mqttSendMessage(const char *message);
 
 void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
   if (len == 0) return;
@@ -613,7 +619,6 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
   }
 
   if (strcmp("update", command) == 0) {
-    _mqttSendMessage("Updating...");
     FOTAClient.checkAndUpdateFOTA(true);
     return;
   }
