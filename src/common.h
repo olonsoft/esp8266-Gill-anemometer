@@ -194,7 +194,7 @@ bool formatFS() {
 bool saveConfig() {
   if (!helper_general::beginFileSystem()) return false; // ? I had to mount again FS. Is it a bug?
 
-  DynamicJsonDocument doc(1024);
+  JsonDocument doc;
 
   doc[F("ssid")] = appSettings.ssid;
   doc[F("pass")] = appSettings.password;
@@ -258,8 +258,8 @@ bool loadConfig() {
     return false;
   }
 
-  const size_t capacity = ESP.getFreeHeap() - 3096;
-  DynamicJsonDocument doc(capacity);
+  // const size_t capacity = ESP.getFreeHeap() - 3096;
+  JsonDocument doc;
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, configFile);
   if (error) {

@@ -10,6 +10,10 @@
 
 - Nothing
 
+## _[v1.3.0](https://github.com/olonsoft/esp8266-Gill-anemometer) (2025-12-01)_
+- fixed some bugs
+- updated the libraries
+
 ## _[v1.2.2](https://github.com/olonsoft/esp8266-Gill-anemometer) (2022-10-08)_
 
 <details open>

@@ -3,7 +3,7 @@
 
 #include <WindFunc.h>  // needed for units conversion
 
-enum class SerialDataResult { // received serial data status
+enum class DecodedDataResult { // received serial data status
   Ok,                         // is Valid. WindSpeed and WindDirection were extracted.
   NoControlChars,             // does not contain control characters
   CheckSumError,              // checksum error
@@ -13,10 +13,11 @@ enum class SerialDataResult { // received serial data status
 
 class Gill {
  public:
-  SerialDataResult  decodeSerialData(char *data);
+  DecodedDataResult  decodeSerialData(char *data);
+  DecodedDataResult  decodeSerialData1(char *data);
   void              setWindSpeedUnit(WindSpeedUnit speedUnit);
   WindSpeedUnit     getWindSpeedUnit();
-  SerialDataResult  getSerialDataResult();
+  DecodedDataResult  getSerialDataResult();
   float             getSpeed();
   int               getDirection();
 
@@ -24,7 +25,7 @@ class Gill {
   WindSpeedUnit    _windSpeedUnit;
   float            _speed;
   int              _direction;
-  SerialDataResult _serialDataResult;
+  DecodedDataResult _serialDataResult;
 };
 
 #endif

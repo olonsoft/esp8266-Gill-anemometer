@@ -373,18 +373,18 @@ void loop() {
 
   if (serialDataReceived()) {
     flashChipLed();
-    SerialDataResult sdr = gill.decodeSerialData(_serial_data);
-    switch (sdr) {
-      case SerialDataResult::Ok:
+    DecodedDataResult dr = gill.decodeSerialData(_serial_data);
+    switch (dr) {
+      case DecodedDataResult::Ok:
         mqttSendCurrentWindData(gill.getSpeed(), gill.getDirection());
         addDeviceValues(gill.getSpeed(), gill.getDirection());
         break;
-      case SerialDataResult::NoControlChars:  // if there is no control char, it's a message
+      case DecodedDataResult::NoControlChars:  // if there is no control char, it's a message
                               // from Gill. Sent it to mqtt status.
         parseDeviceData(_serial_data);
         break;
       default:
-        TLOGDEBUGF_P(PSTR("[PARSE] Error %d parsing wind data.\n"), sdr);
+        TLOGDEBUGF_P(PSTR("[PARSE] Error %d parsing wind data.\n"), dr);
         break;
     }
     _serial_has_new_data = false;
