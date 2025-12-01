@@ -1,13 +1,13 @@
 #pragma once
 
+#include <arduino.h>
 #include <ArduinoJson.h>
 #include <FOTA_ESP.h>
 #include <FS.h>
 #include <WiFiManager.h>  //https://github.com/tzapu/WiFiManager
-#include <arduino.h>
-#include <helper.h>
+#include <helper_general.h>
 #include <helper_wifi.h>
-#include <time_functions.h>
+#include <helper_time.h>
 #include <TZ.h>           // for TimeZone define
 
 // needed for justwifi
@@ -16,14 +16,8 @@
 #include <JustWifi.h>
 #include <JustWifiUtils.h>
 #include <onebutton.h>
-#define BUTTON1 D3  // GPIO 0
 
-#define APP_NAME    "Anemometer"
-#define APP_VERSION "1.1.5"  // Updated 2021-04-06
-#define APP_AUTHOR  "dimitris19@gmail.com"
-#define APP_WEBSITE "http://studio19.gr"
-
-typedef struct {
+struct AppSettings {
   // general
   char     ssid[31];
   char     password[63];
@@ -31,27 +25,28 @@ typedef struct {
   uint16_t mqttPort;
   char     mqttUser[20];
   char     mqttPass[63];
-  char     mqttTopic[60];  // I use 3 topics /data /stat /cmd
+  char     mqttTopic[60];               // I use 3 topics /data /stat /cmd
   uint16_t mqttTopicDataInterval;
   uint16_t mqttTopicStatusInterval;
   char     firmwareUpdateServer[80];
-  uint16_t firmwareUpdateInterval;
-} appSettings_t;
+  uint16_t firmwareUpdateCheckInterval;
+};
 
-appSettings_t appSettings = {
-    "ssid",                            // wifi to connect
-    "wifipass",                        // wifi password
-    "test.mosquitto.org",              // mqtt broker
-    1883,                              // mqtt port
-    "",                                // mqtt user
-    "",                                // mqtt password
-    "olonsoft/devices/anemometer/gill01/", // mqtt topic
-    60,                                // data topic update interval
-    600,                               // status topic update interval
-    "http://fw.crete.ovh/anemometer/gill01", // firmware url
-    900};                              // firmware update check interval
+AppSettings appSettings = {
+    DEFAULT_WIFI1_SSID,                 // wifi to connect
+    DEFAULT_WIFI1_PSW,                  // wifi password
+    MQTT_BROKER,                        // mqtt broker
+    MQTT_PORT,                          // mqtt port
+    MQTT_USER,                          // mqtt user
+    MQTT_PSW,                           // mqtt password
+    MQTT_TOPIC,                         // mqtt topic
+    UPDATE_INTERVAL_DATA,               // data topic update interval
+    UPDATE_INTERVAL_STATUS,             // status topic update interval
+    FIRMWARE_URL,                       // firmware url
+    UPDATE_INTERVAL_CHECK_FW            // firmware update check interval
+  };
 
-#define CONFIGFILE "/config.json"
+String _crash_post_url = CRASH_POST_URL;
 
 #define SEND_DATA 1
 
@@ -59,7 +54,6 @@ appSettings_t appSettings = {
 #define EEPROM_SIZE 4096  // EEPROM size in bytes
 // #define SPI_FLASH_SEC_SIZE      4096
 
-#define MQTT_STR "[\e[32mMQTT\e[m] "
 #define MQTT_ENABLED
 #define USE_PUBSUBCLIENT
 
@@ -71,9 +65,8 @@ appSettings_t appSettings = {
 #include <MQTT.h>
 #endif
 
-uint32_t   _lastMQTTloop = 0;
-uint16_t   mqttConnections;
-bool       mqttConnected = false;
+uint16_t   _mqtt_connections;
+bool       _mqtt_connected = false;
 const char _topicData[]    PROGMEM = {"data"};
 const char _topicStatus[]  PROGMEM = {"stat"};
 const char _topicCommand[] PROGMEM = {"cmd"};
@@ -86,6 +79,7 @@ const char _statusPayload[] PROGMEM =
     "\"pass\":\"%s\","
     "\"bssi\":\"%s\","
     "\"rssi\":%d,"
+    "\"ip\":\"%s\","
     "\"time\":\"%s\","
     "\"uptm\":\"%s\","
     "\"memo\":%d,"
@@ -109,7 +103,7 @@ MQTTClient mqttClient(512);
 
 #endif  // MQTT_ENABLED
 
-String statusString = "Starting";
+String _status_text = "Starting";
 
 #define OLED1306
 
@@ -126,27 +120,29 @@ int screenW               = 128;
 int screenYH              = 16;   // top yellow part is 16 px height
 int screenH               = 64;
 bool screenOn             = true;
-uint32_t lastTimeScreenOn = 0;
-uint32_t screenSaverTime  = 120;  // seconds
+uint32_t screenOnTime     = 0;
 #endif
 
 // ============================== time library ================================
 
-const char *ntpServer = "gr.pool.ntp.org";
+const char *ntpServer = NTP_SERVER;
 // timezones: https://remotemonitoringsystems.ca/time-zone-abbreviations.php
 #define MY_TIMEZONE TZ_Europe_Athens
 
-// const char *TZ_INFO = "EET-2EEST-3,M3.5.0/03:00:00,M10.5.0/04:00:00";  
-                                                     
+// const char *TZ_INFO = "EET-2EEST-3,M3.5.0/03:00:00,M10.5.0/04:00:00";
+
 
 // =========================== onebutton ======================================
 
 OneButton button1(BUTTON1, true);
-uint32_t longPressStart = 0;
+uint32_t _longpress_start_time = 0;
 
 //=============================================================================
 
-bool ESP_FSExist = false;
+void _statusReport();  // used later
+bool _mqttSendMessage(const char *message);
+
+//=============================================================================
 
 String URLEncode2(const char *msg) {
   const char *hex = "0123456789abcdef";
@@ -179,7 +175,7 @@ void debugConfig() {
       appSettings.mqttPort, appSettings.mqttUser, appSettings.mqttPass,
       appSettings.mqttTopic, appSettings.mqttTopicDataInterval,
       appSettings.mqttTopicStatusInterval, appSettings.firmwareUpdateServer,
-      appSettings.firmwareUpdateInterval);
+      appSettings.firmwareUpdateCheckInterval);
 }
 
 // ================================== ESP_FS ==================================
@@ -195,21 +191,10 @@ bool formatFS() {
   }
 }
 
-void checkFileSystem() {
-  ESP_FSExist = false;
-  if (!ESP_FS.begin()) {
-    TLOGDEBUGF_P(PSTR("[ESP_FS] File system error. Formatting...\n"));
-    ESP_FSExist = formatFS();
-  } else {
-    TLOGDEBUGF_P(PSTR("[ESP_FS] File system check OK.\n"));
-    ESP_FSExist = true;
-  }
-}
-
 bool saveConfig() {
-  if (!ESP_FSExist) return false;
+  if (!helper_general::beginFileSystem()) return false; // ? I had to mount again FS. Is it a bug?
 
-  DynamicJsonDocument doc(1024);
+  JsonDocument doc;
 
   doc[F("ssid")] = appSettings.ssid;
   doc[F("pass")] = appSettings.password;
@@ -221,11 +206,11 @@ bool saveConfig() {
   doc[F("mdin")] = appSettings.mqttTopicDataInterval;
   doc[F("msin")] = appSettings.mqttTopicStatusInterval;
   doc[F("usrv")] = appSettings.firmwareUpdateServer;
-  doc[F("uint")] = appSettings.firmwareUpdateInterval;
+  doc[F("uint")] = appSettings.firmwareUpdateCheckInterval;
 
   serializeJsonPretty(doc, Serial);
 
-  File configFile = ESP_FS.open(CONFIGFILE, "w");
+  File configFile = ESP_FS.open(String(CONFIGFILE), "w");
 
   if (!configFile) {
     TLOGDEBUGF_P(
@@ -250,15 +235,15 @@ bool saveConfig() {
 
 bool loadConfig() {
   TLOGDEBUGF_P(PSTR("[ESP_FS] Loading config from file [%s].\n"), CONFIGFILE);
-  if (!ESP_FSExist) return false;
+  if (!helper_general::beginFileSystem()) return false;
 
-  if (!ESP_FS.exists(CONFIGFILE)) {
+  if (!ESP_FS.exists(String(CONFIGFILE))) {
     TLOGDEBUGF_P(PSTR("Config file does not exist. Creating default. [%s]\n"),
                   CONFIGFILE);
     return (saveConfig());
   }
 
-  File configFile = ESP_FS.open(CONFIGFILE, "r");
+  File configFile = ESP_FS.open(String(CONFIGFILE), "r");
   if (!configFile) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Failed to open config file [%s].\n"),
                   CONFIGFILE);
@@ -266,13 +251,15 @@ bool loadConfig() {
   }
 
   size_t size = configFile.size();
+  TLOGDEBUGF_P(PSTR("[ESP_FS] Config file size: %d\n"),size);
+
   if (size > 1024) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Config file size is too large.\n"));
     return false;
   }
 
-  const size_t capacity = ESP.getFreeHeap() - 3096;
-  DynamicJsonDocument doc(capacity);
+  // const size_t capacity = ESP.getFreeHeap() - 3096;
+  JsonDocument doc;
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, configFile);
   if (error) {
@@ -306,15 +293,16 @@ bool loadConfig() {
   strlcpy(appSettings.firmwareUpdateServer,
           doc[F("usrv")] | appSettings.firmwareUpdateServer,
           sizeof(appSettings.firmwareUpdateServer));
-  appSettings.firmwareUpdateInterval =
-      doc[F("uint")] | appSettings.firmwareUpdateInterval;
+  appSettings.firmwareUpdateCheckInterval =
+      doc[F("uint")] | appSettings.firmwareUpdateCheckInterval;
   debugConfig();
   return true;
 }
 
 bool deleteConfig() {
-  if (!ESP_FSExist) return false;
-  if (!ESP_FS.exists(CONFIGFILE)) {
+  if (!helper_general::beginFileSystem()) return false; // ? I had to mount again FS. Is it a bug?
+
+  if (!ESP_FS.exists(String(CONFIGFILE))) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Config file [%s] does not exist.\n"),
                   CONFIGFILE);
     return false;
@@ -322,7 +310,7 @@ bool deleteConfig() {
 
   TLOGDEBUGF_P(PSTR("[ESP_FS] Deleting config file [%s].\n"), CONFIGFILE);
 
-  if (ESP_FS.remove(CONFIGFILE)) {
+  if (ESP_FS.remove(String(CONFIGFILE))) {
     TLOGDEBUGF_P(PSTR("[ESP_FS] Config File deleted.\n"));
     return true;
   } else {
@@ -373,7 +361,7 @@ int saveFlashString(uint16_t startAt, const String& id)
 int saveFlashWiFi(const String& ssid, const String& pass) {
     uint16_t lenSSID = ssid.length();
     uint16_t lenPass = pass.length();
-    if (lenSSID > 31 || lenPass > 63) return -1; // invalid ssid or password 
+    if (lenSSID > 31 || lenPass > 63) return -1; // invalid ssid or password
     EEPROM.begin(EEPROM_SIZE);
 
     // ssid starts at 0. Max is 31 + #0 (31 is the max because 0 is first)
@@ -401,34 +389,40 @@ int saveFlashWiFi(const String& ssid, const String& pass) {
 */
 
 // FOTA section
-void onFOTAMessage(fota_t t, char *msg) { TLOGDEBUG(msg); }
+void onFOTAMessage(fota_t t, char *msg) {
+  _mqttSendMessage(msg);
+  TLOGDEBUG(msg);
+}
 
 void FOTA_Setup() {
-  FOTAClient.setFOTAParameters(addTrailingSlash(String(appSettings.firmwareUpdateServer)).c_str(), APP_NAME,
-                                 APP_VERSION, APP_VERSION);
+  String server = helper_general::addMacAddress(String(appSettings.firmwareUpdateServer));
+  server = helper_general::addTrailingSlash(server);
+  FOTAClient.setFOTAParameters(server.c_str(), "firmware.json",
+                               APP_VERSION, APP_VERSION);
   FOTAClient.onMessage(onFOTAMessage);
 }
 
 void FOTA_Loop() {
-  static unsigned long last_check = 0;
+
   if (WiFi.status() != WL_CONNECTED) return;
-  if ((last_check > 0) &&
-      ((millis() - last_check) < appSettings.firmwareUpdateInterval * 1000))
-    return;
-  last_check = millis();
-  FOTAClient.checkAndUpdateFOTA(true);
+
+  static uint32_t last_check = 0;
+  if (helper_time::timeReached(last_check)) {
+    helper_time::setNextTimeInterval(last_check, appSettings.firmwareUpdateCheckInterval * 1000);
+    FOTAClient.checkAndUpdateFOTA(true);
+  }
+
 }
 // =============================== just wifi start =============================
 
 void jwSetup() {
-  jw.setHostname(
-      APP_NAME);  // Set WIFI hostname (otherwise it would be ESP_XXXXXX)
+  jw.setHostname(APP_NAME);  // Set WIFI hostname (otherwise it would be ESP_XXXXXX)
 
   // Callbacks
   jw.subscribe(infoCallback);
   jw.subscribe(mdnsCallback);
   // AP mode only as fallback
-  jw.enableAP(false);
+  //jw.enableAP(false);
   jw.enableAPFallback(false);
 
   // Enable STA mode (connecting to a router)
@@ -443,14 +437,13 @@ void jwSetup() {
   WiFi.printDiag(Serial);
 
   // Add internal esp8266 saved wifi network
-  jw.addCurrentNetwork(true);
+  //jw.addCurrentNetwork(true);
   // Add wifi network saved in settings
   jw.addNetwork(appSettings.ssid, appSettings.password);
   // add additional wifi networks
+  jw.addNetwork("Yianna Caravel", "2810824724");
   jw.addNetwork("ikaros3", "ikaros2021");
-  jw.addNetwork("ikaros3", "ikaros2022");
-  jw.addNetwork("ikaros3", "ikaros2023");
-  jw.addNetwork("Support", "12345678");  
+  jw.addNetwork("Support", "12345678");
   // Add an open network
   jw.addNetwork("open");
 }
@@ -482,7 +475,7 @@ void click1() {
   Serial.println("Button 1 click.");
 #ifdef OLED1306
   screenOn = true;
-  lastTimeScreenOn = millis();
+  screenOnTime = millis();
   display.displayOn();
 #endif
 }  // click1
@@ -497,7 +490,7 @@ void doubleclick1() {
 // time.
 void longPressStart1() {
   Serial.println("Button 1 longPress start");
-  longPressStart = millis();
+  _longpress_start_time = millis();
 }  // longPressStart1
 
 // This function will be called often, while the button1 is pressed for a long
@@ -510,7 +503,7 @@ void longPress1() {
 // pressed for a long time.
 void longPressStop1() {
   Serial.println("Button 1 longPress stop");
-  if (millis() - longPressStart > 5000) {
+  if (helper_time::timePassedSince(_longpress_start_time) > 5000) {
     resetESP();
   }
 }  // longPressStop1
@@ -556,37 +549,26 @@ void _drawWifiQuality(int8_t quality) {
 }
 
 void _oledUpdateStatusText() {
- 
+
   display.setColor(BLACK);
   display.fillRect(0, 0, 82, 15);
   display.setColor(WHITE);
   display.setTextAlignment(TEXT_ALIGN_LEFT);
-  if (statusString == "") {
+  if (_status_text == "") {
     if (millis()%6000 < 3000) {
-      statusString = WiFi.localIP().toString();
+      _status_text = WiFi.localIP().toString();
     } else {
-      statusString = WiFi.SSID();
+      _status_text = WiFi.SSID();
     }
   }
   display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 0, statusString);
+  display.drawString(0, 0, _status_text);
 
   //display.drawLine(0, 16, 82, 16);
   static unsigned long last_check = 0;
   if ((last_check > 0) && ((millis() - last_check) < 3000)) return;
   last_check = millis();
-  statusString = "";
-}
-
-void _oledLoop() {
-  static unsigned long last_check = 0;
-  if ((last_check > 0) && ((millis() - last_check) < 1000)) return;
-  last_check = millis();
-  if (screenOn) {
-    _oledUpdateStatusText();
-    _drawWifiQuality( wifiGetRssiAsQuality(WiFi.RSSI()) );
-    display.display();
-  }
+  _status_text = "";
 }
 
 #endif
@@ -595,8 +577,6 @@ void _oledLoop() {
 
 #ifdef MQTT_ENABLED
 
-void _statusReport();  // used later
-bool _mqttSendMessage(const char *message);
 
 void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
   if (len == 0) return;
@@ -604,13 +584,14 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
   char message[len + 1];
   strlcpy(message, (char *)payload, len + 1);
   message[len] = '\0';
-  TLOGDEBUGF_P(PSTR("%sTopic: %s \tMessage: %s\n"), MQTT_STR, topic, message);
+  TLOGDEBUGF_P(PSTR("%sTopic: %s \tIncoming Message: %s\n"), MQTT_STR, topic, message);
 
   char *command = strtok(message, " ");
 
   if (strcmp("status", command) == 0) {
     // send status report
     _statusReport();
+    return;
   };
 
   if (strcmp("reset", command) == 0) {
@@ -618,6 +599,7 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
     delay(2000);
     resetESP();
     delay(5000);
+    return;
   }
 
   if (strcmp("format", command) == 0) {
@@ -625,6 +607,7 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
     delay(2000);
     formatFS();
     delay(5000);
+    return;
   }
 
   if (strcmp("restart", command) == 0) {
@@ -632,21 +615,21 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
     delay(2000);
     ESP.restart();
     delay(5000);
+    return;
   }
 
   if (strcmp("update", command) == 0) {
-    _mqttSendMessage("Updating...");
     FOTAClient.checkAndUpdateFOTA(true);
+    return;
   }
 
-  if (strcmp("broker", command) ==
-      0) {  // command is: broker user:password@domain_or_ip:port
-    char *userid = strtok(NULL, ":");
-    char *password = strtok(NULL, "@");
-    char *url = strtok(NULL, ":");
-    char *port = strtok(NULL, "");
+  if (strcmp("broker", command) == 0) {  // command is: broker user:password@domain_or_ip:port
+    char *userid = strtok(nullptr, ":");
+    char *password = strtok(nullptr, "@");
+    char *url = strtok(nullptr, ":");
+    char *port = strtok(nullptr, "");
 
-    if (userid != NULL) {
+    if (userid != nullptr) {
       if (strcmp("*", userid) > 0) {  // if user or password is blank, use *
         appSettings.mqttUser[0] = 0;
       } else {
@@ -654,30 +637,32 @@ void _mqttOnMessage(char *topic, char *payload, unsigned int len) {
       }
     }
 
-    if (password != NULL) {
+    if (password != nullptr) {
       if (strcmp("*", password) > 0) {
         appSettings.mqttPass[0] = 0;
       } else {
         strcpy(appSettings.mqttPass, password);
       }
     }
-    if (url != NULL) {
+    if (url != nullptr) {
       strcpy(appSettings.mqttBroker, url);
     }
-    if (port != NULL) {
+    if (port != nullptr) {
       appSettings.mqttPort = atoi(port);
     }
     debugConfig();
     _mqttSendMessage("Saving new broker.");
     saveConfig();
+    return;
   }
 
   if (strcmp("interval", command) == 0) {
-    char *value = strtok(NULL, "");
-    if (value != NULL) {
+    char *value = strtok(nullptr, "");
+    if (value != nullptr) {
       appSettings.mqttTopicDataInterval = atoi(value);
       _mqttSendMessage("Saving new interval.");
       saveConfig();
+      return;
     }
   }
 }
@@ -698,17 +683,17 @@ void mqttCallback(String &topic, String &payload) {
 bool mqttConnect() {
   if (WiFi.status() != WL_CONNECTED) {
     TLOGDEBUGF_P(PSTR("%sNo WiFi connection \n"), MQTT_STR);
-    return (mqttConnected = false);
+    return (_mqtt_connected = false);
   }
-  TLOGDEBUGF_P(PSTR("%sConnecting to MQTT... \n"), MQTT_STR);
-  mqttConnected = mqttClient.connected();
-  if (!mqttConnected) {
+  //TLOGDEBUGF_P(PSTR("%sConnecting to MQTT... \n"), MQTT_STR);
+  _mqtt_connected = mqttClient.connected();
+  if (!_mqtt_connected) {
     TLOGDEBUGF_P(PSTR("%sConnecting to: \n\t%s\n\tPort: %d\n\tUser: "
                        "%s\n\tpass: %s\n"), MQTT_STR,
                   appSettings.mqttBroker, appSettings.mqttPort,
                   appSettings.mqttUser, appSettings.mqttPass);
     String clientId = (char *)APP_NAME;
-    clientId += "-" + getChipIdHex();
+    clientId += "-" + helper_general::getChipIdHex();
 #ifdef USE_PUBSUBCLIENT
     mqttClient.setServer(appSettings.mqttBroker, appSettings.mqttPort);
     mqttClient.setCallback(mqttCallback);
@@ -716,14 +701,20 @@ bool mqttConnect() {
     mqttClient.begin(appSettings.mqttBroker, appSettings.mqttPort, wifiClient);
     mqttClient.onMessage(mqttCallback);
 #endif
+    String lwt_topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+    lwt_topic = helper_general::addTrailingSlash(lwt_topic) + F("LWT");
+
     if (mqttClient.connect(clientId.c_str(), appSettings.mqttUser,
-                           appSettings.mqttPass)) {
-      mqttConnections++;
+                           appSettings.mqttPass, lwt_topic.c_str(), 1, true, "offline")) {
+      _mqtt_connections++;
+      mqttClient.publish(lwt_topic.c_str(), "online", true);
+
       TLOGDEBUGF_P(PSTR("%sConnected.\n"), MQTT_STR);
-      String topic;
-      topic = addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicCommand);
+      String topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+      topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicCommand);
+      TLOGDEBUGF_P(PSTR("%sSubscribing to topic %s\n"), MQTT_STR, topic.c_str());
       mqttClient.subscribe(topic.c_str());
-      mqttConnected = true;
+      _mqtt_connected = true;
     } else {
       int err = 0;
 #ifdef USE_PUBSUBCLIENT
@@ -734,25 +725,24 @@ bool mqttConnect() {
       TLOGDEBUGF_P(PSTR("%sConnection failed] rc = %d\n"), MQTT_STR, err);
     }
   } else {
-    TLOGDEBUGF_P(PSTR("%sAlready connected.\n"), MQTT_STR);
+    //TLOGDEBUGF_P(PSTR("%sAlready connected.\n"), MQTT_STR);
   }
-  return mqttConnected;
+  return _mqtt_connected;
 }
 
 bool _mqttSendMessage(const char *message) {
   bool result = false;
+  String topic = "";
   if (mqttConnect()) {
-    statusString = "Sending...";
-    String topic;
-    topic = addTrailingSlash(String(appSettings.mqttTopic)) + FPSTR(_topicStatus);
-    LOGDEBUGLN(topic.c_str());
+    _status_text = "Sending...";
+    topic = helper_general::addMacAddress(String(appSettings.mqttTopic));
+    topic = helper_general::addTrailingSlash(topic) + FPSTR(_topicStatus);
     result = (mqttClient.publish(topic.c_str(), message) == true);
-    mqttClient.loop();
   }
   if (result) {
-    TLOGDEBUGF_P(PSTR("%sSuccess sending message.\n"), MQTT_STR);
+    TLOGDEBUGF_P(PSTR("%sSuccess sending message to topic: %s\n"), MQTT_STR, topic.c_str());
   } else {
-    TLOGDEBUGF_P(PSTR("%sError sending message.\n"), MQTT_STR);
+    TLOGDEBUGF_P(PSTR("%sError sending message to topic: %s\n"), MQTT_STR, topic.c_str());
   }
   return result;
 }
@@ -765,53 +755,65 @@ void _statusReport() {
              (char *)APP_VERSION, WiFi.SSID().c_str(),
              "*****",  // WiFi.psk().c_str(),
              WiFi.BSSIDstr().c_str(), WiFi.RSSI(),
-             timeToString().c_str(), getUpTimeString().c_str(),
+             WiFi.localIP().toString().c_str(),
+             helper_time::timeToString().c_str(),
+             helper_time::getUpTimeString().c_str(),
              ESP.getFreeHeap(),
              String(ESP.getResetReason()).c_str(),
-             String(appSettings.mqttBroker).c_str(), 
+             String(appSettings.mqttBroker).c_str(),
              appSettings.mqttPort,
              String(appSettings.mqttUser).c_str(),
              "*****",  // String(appSettings.mqttPass).c_str(),
-             mqttConnections,
+             _mqtt_connections,
              volt);
 
-  LOGDEBUGF("\n[MQTT BUFFER] %s\n", buffer);
+  LOGDEBUGF("\n%sBuffer: %s\n", MQTT_STR,  buffer);
 
   _mqttSendMessage(buffer);
 }
 
 void _statusReportLoop() {
-  static uint32_t last_status_check = 0;
+
   if (WiFi.status() != WL_CONNECTED) return;
   if (appSettings.mqttTopicStatusInterval == 0) return;
-  if ((last_status_check > 0) &&
-      ((millis() - last_status_check) < (appSettings.mqttTopicStatusInterval * 1000)))
-    return;
-  last_status_check = millis();
-  _statusReport();
+
+  static uint32_t last_status_report = 0;
+  if (helper_time::timeReached(last_status_report)) {
+    helper_time::setNextTimeInterval(last_status_report, appSettings.mqttTopicStatusInterval * 1000);
+    _statusReport();
+  }
+
 }
 
-void _mqttLoop() {
+void mqttLoop() {
   if (WiFi.status() != WL_CONNECTED) return;
+  static uint32_t loop_delay = 0;
+  if (helper_time::timeReached(loop_delay)) {         // Not need to call .loop() so often.
+    helper_time::setNextTimeInterval(loop_delay, 50); // Every 50ms is enough
 
-  if (!mqttClient.loop()) {
-    static uint32_t last_mqtt_check = 0;
-    if ((last_mqtt_check == 0) || (millis() - last_mqtt_check) > 10000) {
-      last_mqtt_check = millis();
-      TLOGDEBUGF_P(PSTR("%s(mqttloop) Not connected. Reconnecting.\n"), MQTT_STR);
-      mqttConnect();
+    if (!mqttClient.loop()) {
+      static uint32_t last_mqtt_check = 0;
+
+      if (helper_time::timeReached(last_mqtt_check)) {
+        helper_time::setNextTimeInterval(last_mqtt_check, 10000);
+        TLOGDEBUGF_P(PSTR("%s(mqttloop) Not connected. Reconnecting.\n"), MQTT_STR);
+        mqttConnect();
+      }
+    } else {
+      _statusReportLoop();
     }
-  } else {
-    _statusReportLoop();
+
   }
 }
 
 #endif
 
 void initialize() {
+  _crash_post_url = helper_general::addMacAddress(_crash_post_url);
+
   // check file system
   TLOGDEBUGF_P(PSTR("[DEBUG] Checking file system.\n"));
-  checkFileSystem();
+  helper_general::beginFileSystem();
   TLOGDEBUGF_P(PSTR("[DEBUG] Print default configuration:\n"));
   debugConfig();
 
@@ -822,8 +824,8 @@ void initialize() {
   initSSD1306();
 #endif
 
-  TLOGDEBUGF_P("[DEBUG] Printing info:\n"); 
-  TLOGDEBUGLN(getSystemInfoJson());
+  TLOGDEBUGF_P("[DEBUG] Printing info:\n");
+  TLOGDEBUGLN(helper_general::getSystemInfoJson());
 
   TLOGDEBUGF_P("[DEBUG] Setup oneButton.\n");
   oneButtonSetup();
@@ -843,7 +845,7 @@ void initialize() {
   //configTime(0, 0, ntpServer);
   //setenv("TZ", TZ_INFO, 1);
   //tzset();  // save the TZ variable
-  
+
   // Give now a chance to the settimeofday callback,
   // because it is *always* deferred to the next yield()/loop()-call.
   yield();
@@ -880,11 +882,7 @@ void startWiFiManager() {
                                 //portal gets turned off
 
   // it starts an access point with the specified name
-  // here  "AutoConnectAP"
   // and goes into a blocking loop awaiting configuration
-
-  // WITHOUT THIS THE AP DOES NOT SEEM TO WORK PROPERLY WITH SDK 1.5 , update to
-  // at least 1.5.1 WiFi.mode(WIFI_STA);
 
   if (!wifiManager.startConfigPortal((char *)APP_NAME)) {
     TLOGDEBUGF_P("failed to connect and hit timeout\n");
@@ -917,18 +915,4 @@ void wifiLoop() {
   } else {
     startWiFiManager();
   }
-}
-
-void appLoop() {
-#ifdef OLED1306
-  _oledLoop();
-#endif
-
-#ifdef MQTT_ENABLED
-  // check for messages every second
-  if (millis() - _lastMQTTloop > 1000) {
-    _lastMQTTloop = millis();
-    _mqttLoop();
-  }
-#endif
 }

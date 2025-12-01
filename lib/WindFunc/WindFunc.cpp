@@ -1,165 +1,178 @@
-#include <arduino.h>
-#include <helper.h>
 #include <WindFunc.h>
+#include <Arduino.h>
+#include <helper_general.h>
+#include <math.h>
 
-float WindFunc::convertUnit(float speed, windSpeedUnit_t fromUnit, windSpeedUnit_t toUnit)
-{
+// Define conversions constants to avoid magic numbers
+const float KNOTS_TO_KMH = 1.852f;
+const float MPH_TO_KMH   = 1.60934f;
+const float FPS_TO_KMH   = 1.09728f; // (0.3048 * 3600) / 1000
+const float MS_TO_KMH    = 3.6f;
+const float FPM_TO_KMH   = 0.018288f;
+
+float WindFunc::convertUnit(float speed, WindSpeedUnit fromUnit,
+                            WindSpeedUnit toUnit) {
+  if (fromUnit == toUnit) {
+    return speed;
+  }
+
   float tmpKmPerHour = 0.0f;
-  float result = speed;
-  if (fromUnit != toUnit)
-  {
-    switch (fromUnit)
-    {
-    case wsMetersPerSecond:
-      tmpKmPerHour = 3.6f * speed;
+
+  // 1. Normalize source to Km/h
+  switch (fromUnit) {
+    case WindSpeedUnit::MetresPerSecond:
+      tmpKmPerHour = speed * MS_TO_KMH;
       break;
-    case wsKnots:
-      tmpKmPerHour = 1.852f * speed;
+    case WindSpeedUnit::Knots:
+      tmpKmPerHour = speed * KNOTS_TO_KMH;
       break;
-    case wsMilesPerHour:
-      tmpKmPerHour = 1.6093f * speed;
+    case WindSpeedUnit::MilesPerHour:
+      tmpKmPerHour = speed * MPH_TO_KMH;
       break;
-    case wsKmPerHour:
+    case WindSpeedUnit::KmPerHour:
       tmpKmPerHour = speed;
       break;
-    case wsFeetPerMinute:
-      tmpKmPerHour = 0.0183f * speed;
+    case WindSpeedUnit::FeetPerMinute:
+      tmpKmPerHour = speed * FPM_TO_KMH;
       break;
     default:
-      break;
-    }
-    switch (toUnit)
-    {
-    case wsMetersPerSecond:
-      result = tmpKmPerHour * 0.2777f;
-      break;
-    case wsKnots:
-      result = tmpKmPerHour * 0.5399f;
-      break;
-    case wsMilesPerHour:
-      result = tmpKmPerHour * 0.6213f;
-      break;
-    case wsKmPerHour:
-      result = tmpKmPerHour;
-      break;
-    case wsFeetPerMinute:
-      result = tmpKmPerHour * 54.6806f;
-      break;
-    default:
-      break;
-    }
+      return speed; // Safety return
   }
-  return result;
+
+  // 2. Convert Km/h to target unit
+  switch (toUnit) {
+    case WindSpeedUnit::MetresPerSecond:
+      return tmpKmPerHour / MS_TO_KMH;
+    case WindSpeedUnit::Knots:
+      return tmpKmPerHour / KNOTS_TO_KMH;
+    case WindSpeedUnit::MilesPerHour:
+      return tmpKmPerHour / MPH_TO_KMH;
+    case WindSpeedUnit::KmPerHour:
+      return tmpKmPerHour;
+    case WindSpeedUnit::FeetPerMinute:
+      return tmpKmPerHour / FPM_TO_KMH;
+    default:
+      return tmpKmPerHour;
+  }
 }
 
 void WindFunc::addWindSpeed(float speed) {
   _windSpeedSamples++;
   _windSpeedCurrent = speed;
-  if (_windSpeedSamples == 1)
-  {
-    _windSpeedMin = _windSpeedMax = _windSpeedSum = speed;
-  }
-  else
-  {
-    if (speed < _windSpeedMin)
-      _windSpeedMin = speed;
-    if (speed > _windSpeedMax)
-      _windSpeedMax = speed;
+
+  if (_windSpeedSamples == 1) {
+    _windSpeedMin = speed;
+    _windSpeedMax = speed;
+    _windSpeedSum = speed;
+  } else {
+    if (speed < _windSpeedMin) _windSpeedMin = speed;
+    if (speed > _windSpeedMax) _windSpeedMax = speed;
     _windSpeedSum += speed;
   }
 }
-  
+
 void WindFunc::addWindDirection(uint16_t direction) {
-  if (direction >= 0 && direction < 360) {
+  // Ensure direction is 0-359
+  if (direction < 360) {
     _windDirectionSamples++;
     _windDirectionCurrent = direction;
+    // Accumulate vector components
     _windDirectionCosTotal += cos(direction * DEG2RAD);
     _windDirectionSinTotal += sin(direction * DEG2RAD);
   }
 }
 
-bool WindFunc::getWindSpeed(float &windSpeedCurrent, float &windSpeedAverage, float &windSpeedMin, float &windSpeedMax) {
+bool WindFunc::getWindSpeed(float &windSpeedCurrent, float &windSpeedAverage,
+                            float &windSpeedMin, float &windSpeedMax) {
   if (_windSpeedSamples > 0) {
-    windSpeedAverage = _windSpeedSum / _windSpeedSamples;
+    windSpeedAverage = _windSpeedSum / (float)_windSpeedSamples;
     windSpeedMin     = _windSpeedMin;
     windSpeedMax     = _windSpeedMax;
     windSpeedCurrent = _windSpeedCurrent;
     return true;
   }
-  else
-  {
-    windSpeedCurrent = windSpeedAverage = windSpeedMin = windSpeedMax = 0;
-    return false;
-  }
+
+  // Safe defaults if no samples
+  windSpeedCurrent = windSpeedAverage = windSpeedMin = windSpeedMax = 0.0f;
+  return false;
 }
 
-bool WindFunc::getWindDirection(uint16_t &windDirectionCurrent, uint16_t &windDirectionAverage) {
-  if (_windDirectionSamples > 0 ) {
-    // ! (int) or (uint16_t) ?
+bool WindFunc::getWindDirection(uint16_t &windDirectionCurrent,
+                                uint16_t &windDirectionAverage) {
+  if (_windDirectionSamples > 0) {
     windDirectionCurrent = _windDirectionCurrent;
-    windDirectionAverage = (int)((atan2(_windDirectionSinTotal, _windDirectionCosTotal) / DEG2RAD) + 360) % 360;
-    TLOGDEBUGF_P(PSTR("[DEBUG] SinTotal %.3f CosTotal: %.3f Average Wind Direction: %d.\n"), _windDirectionSinTotal, _windDirectionCosTotal, windDirectionAverage);
+
+    // Calculate average angle from vector sums using atan2
+    float avgRad = atan2(_windDirectionSinTotal, _windDirectionCosTotal);
+
+    // Convert radians to degrees
+    float avgDeg = avgRad * RAD_TO_DEG; // Standard Arduino constant
+
+    // Normalize to 0-360
+    if (avgDeg < 0) {
+        avgDeg += 360.0f;
+    }
+
+    windDirectionAverage = (uint16_t)fmod(avgDeg, 360.0f);
+
+    TLOGDEBUGF_P(PSTR("[DEBUG] SinTotal %.3f CosTotal: %.3f AvgDir: %d\n"),
+                 _windDirectionSinTotal, _windDirectionCosTotal,
+                 windDirectionAverage);
     return true;
   }
-  else 
-    return false;    
+
+  return false;
 }
 
 void WindFunc::resetWindSpeed() {
   _windSpeedSamples = 0;
-  _windSpeedSum     = 0;
+  _windSpeedSum     = 0.0f;
   _windSpeedCurrent = 0.0f;
+  _windSpeedMin     = 0.0f;
+  _windSpeedMax     = 0.0f;
 }
 
-void WindFunc::resetWindDirection(){
-  _windDirectionSamples  = 0;
-  _windDirectionCurrent  = 0;
-  _windDirectionCosTotal = 0.0f;
-  _windDirectionSinTotal = 0.0f;
+void WindFunc::resetWindDirection() {
+  _windDirectionSamples   = 0;
+  _windDirectionCurrent   = 0;
+  _windDirectionCosTotal  = 0.0f;
+  _windDirectionSinTotal  = 0.0f;
 }
 
 int WindFunc::meterPerSecToBeaufort(float m_per_sec) {
-  if (m_per_sec < 0.3) { return 0; }
-  if (m_per_sec < 1.6) { return 1; }
-  if (m_per_sec < 3.4) { return 2; }
-  if (m_per_sec < 5.5) { return 3; }
-  if (m_per_sec < 8.0) { return 4; }
-  if (m_per_sec < 10.8) { return 5; }
-  if (m_per_sec < 13.9) { return 6; }
-  if (m_per_sec < 17.2) { return 7; }
-  if (m_per_sec < 20.8) { return 8; }
-  if (m_per_sec < 24.5) { return 9; }
-  if (m_per_sec < 28.5) { return 10; }
-  if (m_per_sec < 32.6) { return 11; }
-  return 12;
+  // Lookup table for Beaufort thresholds (lower bounds)
+  // B0 < 0.3, B1 < 1.6, etc.
+  const float thresholds[] = {
+    0.3f, 1.6f, 3.4f, 5.5f, 8.0f, 10.8f,
+    13.9f, 17.2f, 20.8f, 24.5f, 28.5f, 32.6f
+  };
+
+  // Iterate through thresholds
+  for (int i = 0; i < 12; i++) {
+    if (m_per_sec < thresholds[i]) {
+      return i;
+    }
+  }
+
+  return 12; // Hurricane force
 }
 
 String WindFunc::getBearingStr(int degrees) {
   const int nr_directions = 16;
-  float stepsize          = (360.0 / nr_directions);
+  // Direction strings array
+  const char* sectors[] = {
+    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
+  };
 
-  if (degrees < 0) { degrees += 360; } // Allow for bearing -360 .. 359
-  int bearing_idx = int((degrees + (stepsize / 2.0)) / stepsize) % nr_directions;
+  // Normalize degrees to 0-360
+  degrees = degrees % 360;
+  if (degrees < 0) degrees += 360;
 
-  String dirStr = F("-");
-  switch (bearing_idx) {
-    case 0:  dirStr =  F("N");
-    case 1:  dirStr = F("NNE");
-    case 2:  dirStr = F("NE");
-    case 3:  dirStr = F("ENE");
-    case 4:  dirStr = F("E");
-    case 5:  dirStr = F("ESE");
-    case 6:  dirStr = F("SE");
-    case 7:  dirStr = F("SSE");
-    case 8:  dirStr = F("S");
-    case 9:  dirStr = F("SSW");
-    case 10: dirStr = F("SW");
-    case 11: dirStr = F("WSW");
-    case 12: dirStr = F("W");
-    case 13: dirStr = F("WNW");
-    case 14: dirStr = F("NW");
-    case 15: dirStr = F("NNW");
-    default: dirStr = F("-");
-  }
-  return dirStr;
+  float stepsize = 360.0f / nr_directions;
+
+  // Calculate index with rounding (add half step)
+  int bearing_idx = (int)((degrees + (stepsize / 2.0f)) / stepsize) % nr_directions;
+
+  return String(sectors[bearing_idx]);
 }
