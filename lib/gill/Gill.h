@@ -13,19 +13,21 @@ enum class DecodedDataResult { // received serial data status
 
 class Gill {
  public:
-  DecodedDataResult  decodeSerialData(char *data);
-  DecodedDataResult  decodeSerialData1(char *data);
-  void              setWindSpeedUnit(WindSpeedUnit speedUnit);
-  WindSpeedUnit     getWindSpeedUnit();
-  DecodedDataResult  getSerialDataResult();
-  float             getSpeed();
-  int               getDirection();
+  Gill();
+  DecodedDataResult decodeSerialData(const char *data);
+  void setWindSpeedUnit(WindSpeedUnit speedUnit);
+  WindSpeedUnit getWindSpeedUnit();
+  DecodedDataResult getSerialDataResult();
+  float getSpeed();
+  int getDirection();
 
  private:
-  WindSpeedUnit    _windSpeedUnit;
-  float            _speed;
-  int              _direction;
+  WindSpeedUnit _targetWindSpeedUnit;
+  float _speed;
+  int _direction;
   DecodedDataResult _serialDataResult;
+  WindFunc _wfGill; // Member variable instead of global
+  WindSpeedUnit parseUnitChar(char c);
 };
 
 #endif
